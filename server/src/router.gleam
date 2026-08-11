@@ -1,0 +1,27 @@
+import gleam/http.{Get, Post}
+import system_stats/stats
+import web
+import wisp.{type Request, type Response}
+
+import ping/ping
+
+pub fn handle_request(req: Request) -> wisp.Response {
+  use req <- web.middleware(req)
+
+  case wisp.path_segments(req) {
+    ["api", ..rest] -> handle_api(rest, req)
+    _ -> wisp.not_found()
+  }
+}
+
+fn handle_api(segments: List(String), req: Request) -> Response {
+  case segments, req.method {
+    [], Get -> ping.get_calculation()
+    [], Post -> ping.save_calculation()
+    [], _ -> wisp.method_not_allowed([Get, Post])
+
+    ["stats"], Get -> stats.get_stats()
+
+    _, _ -> wisp.not_found()
+  }
+}
