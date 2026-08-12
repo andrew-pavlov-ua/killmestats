@@ -1,13 +1,20 @@
 import api/system_stats.{type ServerStatus}
 import gleam/float
 import gleam/int
+import gleam/list
+import gleam/string
 import lustre/attribute
-import lustre/element.{text}
+import lustre/element.{text, type Element}
 import lustre/element/html.{button, div, h1, main, p, span}
 import lustre/event
 import sysstats.{type SystemStats}
 
-pub fn view(stats: SystemStats, status: ServerStatus, fetch_clicked: msg) {
+pub fn view(
+  stats: SystemStats,
+  status: ServerStatus,
+  terminal_lines: List(String),
+  panic_clicked: msg,
+) {
   let #(rounded_cpu_load, rounded_ram_load) = case status {
     system_stats.Alive -> #(
       stats.cpu_load
@@ -72,7 +79,7 @@ pub fn view(stats: SystemStats, status: ServerStatus, fetch_clicked: msg) {
             attribute.class(
               "bg-gleam-yellow border-gleam-ink shadow-gleam mt-9 rounded-xl border-2 px-6 py-3.5 font-mono text-sm font-black uppercase tracking-wider transition-transform hover:-translate-y-0.5 active:translate-x-1 active:translate-y-1 active:shadow-none",
             ),
-            event.on_click(fetch_clicked),
+            event.on_click(panic_clicked),
           ],
           [text("Probe the system →")],
         ),
@@ -134,10 +141,61 @@ pub fn view(stats: SystemStats, status: ServerStatus, fetch_clicked: msg) {
             ],
             [text(status_detail(status))],
           ),
+          terminal(terminal_lines),
         ],
       ),
     ],
   )
+}
+
+fn terminal(lines: List(String)) {
+  let output = case lines {
+    [] -> [
+      p([attribute.class("opacity-50")], [text("$ waiting for input...")]),
+    ]
+    lines -> list.map(lines, terminal_line)
+  }
+
+  div(
+    [
+      attribute.class(
+        "border-gleam-ink mt-6 overflow-hidden rounded-xl border-2 bg-gleam-ink text-white",
+      ),
+    ],
+    [
+      div(
+        [
+          attribute.class(
+            "border-white/20 flex items-center justify-between border-b px-4 py-2",
+          ),
+        ],
+        [
+          p([attribute.class("font-mono text-xs font-bold")], [
+            text("server terminal"),
+          ]),
+          span([attribute.class("size-2 rounded-full bg-gleam-cyan")], []),
+        ],
+      ),
+      div(
+        [
+          attribute.class(
+            "h-28 overflow-y-auto px-4 py-3 font-mono text-xs leading-5",
+          ),
+          attribute.attribute("aria-live", "polite"),
+        ],
+        output,
+      ),
+    ],
+  )
+}
+
+fn terminal_line(line: String) -> Element(msg) {
+  let rest = string.remove_prefix(line, "EROR ")
+
+  p([attribute.class("break-words")], [
+    span([attribute.class("font-black text-gleam-pink")], [text("EROR ")]),
+    text(rest),
+  ])
 }
 
 fn status_detail(status: ServerStatus) -> String {

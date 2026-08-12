@@ -5,7 +5,7 @@ import config
 import gleam/bool
 import gleam/dynamic/decode.{type Decoder}
 import gleam/fetch
-import gleam/http.{Get}
+import gleam/http.{Get, Post}
 import gleam/http/request.{type Request}
 import gleam/javascript/promise.{type Promise}
 import gleam/result
@@ -16,6 +16,16 @@ pub fn get(path: String, decoder: Decoder(a)) -> Promise(Result(a, ApiError)) {
   req
   |> request.set_method(Get)
   |> execute(expect: 200, decoder:)
+}
+
+pub fn post(path: String) -> Promise(Result(Nil, ApiError)) {
+  use req <- with_json_request(path)
+
+  req
+  |> request.set_method(Post)
+  |> fetch.send
+  |> promise.map(result.map_error(_, FetchError))
+  |> promise.map(result.map(_, fn(_) { Nil }))
 }
 
 fn with_json_request(

@@ -13,6 +13,10 @@ pub fn main() -> Nil {
   gleeunit.main()
 }
 
+fn handle_request(req) {
+  router.handle_request(req)
+}
+
 pub fn system_stats_are_percentages_test() {
   let system_stats = stats.get_system_stats()
 
@@ -25,7 +29,7 @@ pub fn system_stats_are_percentages_test() {
 pub fn stats_endpoint_test() {
   let response =
     simulate.request(Get, "/api/stats")
-    |> router.handle_request
+    |> handle_request
 
   response.status
   |> should.equal(200)
@@ -45,7 +49,7 @@ pub fn stats_endpoint_test() {
 pub fn unknown_route_returns_not_found_test() {
   let response =
     simulate.request(Get, "/not-a-route")
-    |> router.handle_request
+    |> handle_request
 
   response.status
   |> should.equal(404)
@@ -54,7 +58,7 @@ pub fn unknown_route_returns_not_found_test() {
 pub fn unsupported_api_method_returns_method_not_allowed_test() {
   let response =
     simulate.request(Delete, "/api")
-    |> router.handle_request
+    |> handle_request
 
   response.status
   |> should.equal(405)
@@ -67,7 +71,7 @@ pub fn unsupported_api_method_returns_method_not_allowed_test() {
 pub fn panic_endpoint_is_rescued_as_internal_server_error_test() {
   let response =
     simulate.request(Post, "/api/panic")
-    |> router.handle_request
+    |> handle_request
 
   response.status
   |> should.equal(500)

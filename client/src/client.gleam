@@ -9,11 +9,14 @@ import ui/app_header
 
 import gleam/javascript/promise
 
+import api/api_client
 import api/error
 import api/system_stats
 import ffi/timer
 
 const poll_interval_ms = 1000
+
+const panic_log = "EROR function=\"panic_program\" message=\"`panic` expression evaluated.\" module=\"router\" file=\"src/router.gleam\" gleam_error=Panic class=Errored"
 
 pub type Page {
   Home
@@ -24,12 +27,13 @@ type Model {
     page: Page,
     stats: sysstats.SystemStats,
     server_status: system_stats.ServerStatus,
+    terminal_lines: List(String),
   )
 }
 
 type Msg {
   Tick
-  UserClickedSubmit
+  UserClickedPanic
   StatsReceived(Result(sysstats.SystemStats, error.ApiError))
 }
 
@@ -45,6 +49,7 @@ fn init(_flags) {
       page: Home,
       stats: sysstats.SystemStats(cpu_load: 0.0, ram_load: 0.0),
       server_status: system_stats.Checking,
+      terminal_lines: [],
     ),
     fetch_stats(),
   )
@@ -52,7 +57,13 @@ fn init(_flags) {
 
 fn view(model: Model) -> Element(Msg) {
   let page = case model.page {
-    Home -> home.view(model.stats, model.server_status, UserClickedSubmit)
+    Home ->
+      home.view(
+        model.stats,
+        model.server_status,
+        model.terminal_lines,
+        UserClickedPanic,
+      )
   }
 
   app_shell.view(app_header.view(model.server_status), page)
@@ -61,7 +72,10 @@ fn view(model: Model) -> Element(Msg) {
 fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
   case msg {
     Tick -> #(model, fetch_stats())
-    UserClickedSubmit -> #(model, fetch_stats())
+    UserClickedPanic -> #(
+      Model(..model, terminal_lines: [panic_log, ..model.terminal_lines]),
+      panic_server(),
+    )
     StatsReceived(Ok(stats)) -> #(
       Model(..model, stats: stats, server_status: system_stats.Alive),
       schedule_next_fetch(),
@@ -80,6 +94,13 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
 
 fn schedule_next_fetch() -> Effect(Msg) {
   timer.after(poll_interval_ms, Tick)
+}
+
+fn panic_server() -> Effect(Msg) {
+  effect.from(fn(_dispatch) {
+    api_client.post("/api/panic")
+    Nil
+  })
 }
 
 fn fetch_stats() -> Effect(Msg) {

@@ -18,6 +18,7 @@ pub fn middleware(
 fn cors_config() {
   cors.new()
   |> cors.allow_origin("http://localhost:1234")
+  |> cors.allow_origin("http://localhost:8080")
   |> cors.allow_method(http.Get)
   |> cors.allow_method(http.Post)
 }
