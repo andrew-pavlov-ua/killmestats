@@ -1,27 +1,36 @@
 import gleam/io
+import layout/app_shell
 import lustre
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import page/home
-import shared
+import sysstats
+import ui/app_header
 
 import gleam/javascript/promise
 
-import api
-import error
+import api/error
+import api/system_stats
+import ffi/timer
+
+const poll_interval_ms = 1000
 
 pub type Page {
   Home
-  // Status
 }
 
 type Model {
-  Model(page: Page, stats: shared.SystemStats)
+  Model(
+    page: Page,
+    stats: sysstats.SystemStats,
+    server_status: system_stats.ServerStatus,
+  )
 }
 
 type Msg {
+  Tick
   UserClickedSubmit
-  StatsReceived(Result(shared.SystemStats, error.ApiError))
+  StatsReceived(Result(sysstats.SystemStats, error.ApiError))
 }
 
 pub fn main() -> Nil {
@@ -32,44 +41,52 @@ pub fn main() -> Nil {
 
 fn init(_flags) {
   #(
-    Model(page: Home, stats: shared.SystemStats(cpu_load: 0.0, ram_load: 0.0)),
-    show_stats(),
+    Model(
+      page: Home,
+      stats: sysstats.SystemStats(cpu_load: 0.0, ram_load: 0.0),
+      server_status: system_stats.Checking,
+    ),
+    fetch_stats(),
   )
 }
 
 fn view(model: Model) -> Element(Msg) {
-  case model.page {
-    Home -> home.view(model.stats, UserClickedSubmit)
+  let page = case model.page {
+    Home -> home.view(model.stats, model.server_status, UserClickedSubmit)
   }
+
+  app_shell.view(app_header.view(model.server_status), page)
 }
 
 fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
   case msg {
-    UserClickedSubmit -> #(model, show_stats())
-    StatsReceived(Ok(stats)) -> #(Model(..model, stats: stats), effect.none())
+    Tick -> #(model, fetch_stats())
+    UserClickedSubmit -> #(model, fetch_stats())
+    StatsReceived(Ok(stats)) -> #(
+      Model(..model, stats: stats, server_status: system_stats.Alive),
+      schedule_next_fetch(),
+    )
 
     StatsReceived(Error(err)) -> {
       io.print_error(error.message(err))
-      #(model, effect.none())
+
+      #(
+        Model(..model, server_status: system_stats.server_status(err)),
+        schedule_next_fetch(),
+      )
     }
   }
 }
 
-fn show_stats() -> Effect(Msg) {
+fn schedule_next_fetch() -> Effect(Msg) {
+  timer.after(poll_interval_ms, Tick)
+}
+
+fn fetch_stats() -> Effect(Msg) {
   effect.from(fn(dispatch) {
-    api.fetch_stats()
+    system_stats.fetch()
     |> promise.map(fn(result) { dispatch(StatsReceived(result)) })
 
     Nil
   })
 }
-// fn static_files() -> List(fs.File) {
-//   [
-//     fs.Copy("fonts"),
-//     fs.Copy("images"),
-//     fs.Copy("img"),
-//     fs.Copy("javascript"),
-//     fs.Copy("styles"),
-//     fs.Copy("funding.json"),
-//   ]
-// }

@@ -1,0 +1,22 @@
+services:
+    server:
+      build:
+        context: .
+        dockerfile: server/Dockerfile
+      restart: unless-stopped
+      ports:
+        - "8000:8000"
+
+    web:
+      build:
+        context: .
+        dockerfile: client/Dockerfile
+        args:
+          GLEAM_VERSION: v1.18.1
+      restart: unless-stopped
+      depends_on:
+        - server
+      ports:
+        - "8080:80"
+      environment:
+        API_HOST: "${API_HOST:-}"

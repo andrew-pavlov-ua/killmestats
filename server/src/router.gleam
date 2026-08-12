@@ -1,9 +1,9 @@
 import gleam/http.{Get, Post}
+import log
+import ping/ping
 import system_stats/stats
 import web
 import wisp.{type Request, type Response}
-
-import ping/ping
 
 pub fn handle_request(req: Request) -> wisp.Response {
   use req <- web.middleware(req)
@@ -21,7 +21,13 @@ fn handle_api(segments: List(String), req: Request) -> Response {
     [], _ -> wisp.method_not_allowed([Get, Post])
 
     ["stats"], Get -> stats.get_stats()
+    ["panic"], Post -> panic_program()
 
     _, _ -> wisp.not_found()
   }
+}
+
+fn panic_program() {
+  log.info("Triggering intentional panic")
+  panic
 }

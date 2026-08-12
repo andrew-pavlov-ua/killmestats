@@ -1,6 +1,7 @@
-import error.{
+import api/error.{
   type ApiError, DecodeError, FetchError, InvalidUrl, UnexpectedStatus,
 }
+import config
 import gleam/bool
 import gleam/dynamic/decode.{type Decoder}
 import gleam/fetch
@@ -8,7 +9,6 @@ import gleam/http.{Get}
 import gleam/http/request.{type Request}
 import gleam/javascript/promise.{type Promise}
 import gleam/result
-import shared.{type SystemStats, SystemStats}
 
 pub fn get(path: String, decoder: Decoder(a)) -> Promise(Result(a, ApiError)) {
   use req <- with_json_request(path)
@@ -22,7 +22,7 @@ fn with_json_request(
   path: String,
   callback: fn(Request(String)) -> Promise(Result(a, ApiError)),
 ) -> Promise(Result(a, ApiError)) {
-  let url = api_base_url() <> path
+  let url = config.api_base_url() <> path
 
   request.to(url)
   |> result.replace_error(InvalidUrl(url))
@@ -50,24 +50,4 @@ fn execute(
     |> decode.run(decoder)
     |> result.map_error(DecodeError)
   })
-}
-
-fn api_base_url() -> String {
-  "http://localhost:8000"
-}
-
-pub fn fetch_stats() -> Promise(Result(SystemStats, ApiError)) {
-  get("/api/stats", stats_decoder())
-}
-
-// complicated json object
-// fn stats_decoder() -> Decoder(SystemStats) {
-//   use stats <- decode.field("systemStats", system_stats_decoder())
-//   decode.success(stats)
-// }
-
-fn stats_decoder() -> Decoder(SystemStats) {
-  use cpu_load <- decode.field("cpu_load", decode.float)
-  use ram_load <- decode.field("ram_load", decode.float)
-  decode.success(SystemStats(cpu_load:, ram_load:))
 }

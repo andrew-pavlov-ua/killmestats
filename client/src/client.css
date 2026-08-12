@@ -1,0 +1,34 @@
+@import "tailwindcss";
+
+@theme {
+  --color-gleam-cream: #fffbe8;
+  --color-gleam-yellow: #f7d56f;
+  --color-gleam-pink: #ffaff3;
+  --color-gleam-purple: #584355;
+  --color-gleam-ink: #2f2933;
+  --color-gleam-cyan: #a6f0fc;
+  --font-sans: "Trebuchet MS", "Avenir Next", Avenir, sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --radius-card: 1.25rem;
+  --shadow-gleam: 5px 5px 0 #2f2933;
+}
+
+@layer base {
+  html {
+    background: var(--color-gleam-cream);
+  }
+
+  body {
+    min-width: 320px;
+    min-height: 100vh;
+    color: var(--color-gleam-ink);
+    background:
+      radial-gradient(circle at 10% 10%, rgb(255 175 243 / 25%), transparent 24rem),
+      radial-gradient(circle at 90% 85%, rgb(166 240 252 / 35%), transparent 28rem),
+      var(--color-gleam-cream);
+  }
+
+  button {
+    font: inherit;
+  }
+}

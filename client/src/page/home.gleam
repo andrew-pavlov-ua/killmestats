@@ -1,24 +1,198 @@
+import api/system_stats.{type ServerStatus}
 import gleam/float
 import gleam/int
+import lustre/attribute
 import lustre/element.{text}
-import lustre/element/html.{button, div, p}
+import lustre/element/html.{button, div, h1, main, p, span}
 import lustre/event
-import shared.{type SystemStats}
+import sysstats.{type SystemStats}
 
-pub fn view(stats: SystemStats, fetch_clicked: msg) {
-  let rounded_cpu_load =
-    stats.cpu_load
-    |> float.round
-    |> int.to_string
+pub fn view(stats: SystemStats, status: ServerStatus, fetch_clicked: msg) {
+  let #(rounded_cpu_load, rounded_ram_load) = case status {
+    system_stats.Alive -> #(
+      stats.cpu_load
+        |> float.round
+        |> int.to_string,
+      stats.ram_load
+        |> float.round
+        |> int.to_string,
+    )
 
-  let rounded_ram_load =
-    stats.ram_load
-    |> float.round
-    |> int.to_string
+    _ -> #("--", "--")
+  }
 
-  div([], [
-    p([], [text("Server CPU loading: " <> rounded_cpu_load <> "%")]),
-    p([], [text("Server RAM loading: " <> rounded_ram_load <> "%")]),
-    button([event.on_click(fetch_clicked)], [text("GET SERVER STATS")]),
-  ])
+  main(
+    [
+      attribute.class(
+        "mx-auto grid max-w-6xl gap-12 px-6 py-16 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:px-10 lg:py-24",
+      ),
+    ],
+    [
+      div([], [
+        p(
+          [
+            attribute.class(
+              "mb-5 font-mono text-sm font-bold uppercase tracking-[0.2em]",
+            ),
+          ],
+          [text("/// let it crash. watch it recover.")],
+        ),
+        h1(
+          [
+            attribute.class(
+              "max-w-xl text-5xl font-black leading-[0.98] tracking-[-0.055em] sm:text-6xl lg:text-7xl",
+            ),
+          ],
+          [
+            text("Kill it. "),
+            span(
+              [
+                attribute.class(
+                  "decoration-gleam-pink decoration-8 underline underline-offset-4",
+                ),
+              ],
+              [text("It comes back.")],
+            ),
+          ],
+        ),
+        p(
+          [
+            attribute.class(
+              "mt-7 max-w-lg text-lg font-medium leading-relaxed opacity-75",
+            ),
+          ],
+          [
+            text(
+              "A live resilience experiment for exploring the fault-tolerant possibilities of Gleam, Erlang, and OTP.",
+            ),
+          ],
+        ),
+        button(
+          [
+            attribute.class(
+              "bg-gleam-yellow border-gleam-ink shadow-gleam mt-9 rounded-xl border-2 px-6 py-3.5 font-mono text-sm font-black uppercase tracking-wider transition-transform hover:-translate-y-0.5 active:translate-x-1 active:translate-y-1 active:shadow-none",
+            ),
+            event.on_click(fetch_clicked),
+          ],
+          [text("Probe the system →")],
+        ),
+      ]),
+      div(
+        [
+          attribute.class(
+            "border-gleam-ink shadow-gleam relative rounded-card border-2 bg-white p-5 sm:p-7",
+          ),
+        ],
+        [
+          div(
+            [
+              attribute.class(
+                "border-gleam-ink/20 mb-6 flex items-center justify-between border-b pb-4",
+              ),
+            ],
+            [
+              p([attribute.class("font-mono text-sm font-bold")], [
+                text("killmestats.gleam"),
+              ]),
+              div([attribute.class("flex gap-2")], [
+                span(
+                  [
+                    attribute.class(
+                      "bg-gleam-pink border-gleam-ink size-3 rounded-full border",
+                    ),
+                  ],
+                  [],
+                ),
+                span(
+                  [
+                    attribute.class(
+                      "bg-gleam-yellow border-gleam-ink size-3 rounded-full border",
+                    ),
+                  ],
+                  [],
+                ),
+                span(
+                  [
+                    attribute.class(
+                      "bg-gleam-cyan border-gleam-ink size-3 rounded-full border",
+                    ),
+                  ],
+                  [],
+                ),
+              ]),
+            ],
+          ),
+          div([attribute.class("grid gap-4 sm:grid-cols-2")], [
+            stat_card("CPU load", rounded_cpu_load, "bg-gleam-pink"),
+            stat_card("RAM load", rounded_ram_load, "bg-gleam-cyan"),
+          ]),
+          p(
+            [
+              attribute.class(
+                "mt-6 font-mono text-xs font-semibold leading-relaxed opacity-60",
+              ),
+            ],
+            [text(status_detail(status))],
+          ),
+        ],
+      ),
+    ],
+  )
+}
+
+fn status_detail(status: ServerStatus) -> String {
+  case status {
+    system_stats.Checking ->
+      "status: Checking // waiting for the first response"
+    system_stats.Alive -> "status: Alive // supervisor standing by"
+    system_stats.ServerUnreachable(detail) ->
+      "status: Unreachable // " <> detail <> " // checking again in 1s"
+    system_stats.ServerDown(code) ->
+      "status: ServerDown("
+      <> int.to_string(code)
+      <> ") // checking again in 1s"
+    system_stats.RequestRejected(code) ->
+      "status: RequestRejected(" <> int.to_string(code) <> ")"
+    system_stats.InvalidResponse(detail) ->
+      "status: InvalidResponse // " <> detail
+    system_stats.ClientError(detail) -> "status: ClientError // " <> detail
+  }
+}
+
+fn stat_card(label: String, value: String, accent: String) {
+  div(
+    [
+      attribute.class(
+        "border-gleam-ink relative overflow-hidden rounded-2xl border-2 p-5",
+      ),
+    ],
+    [
+      span(
+        [
+          attribute.class(
+            accent
+            <> " border-gleam-ink absolute -right-5 -top-5 size-20 rounded-full border-2",
+          ),
+          attribute.attribute("aria-hidden", "true"),
+        ],
+        [],
+      ),
+      p(
+        [
+          attribute.class(
+            "relative font-mono text-xs font-bold uppercase tracking-widest opacity-60",
+          ),
+        ],
+        [text(label)],
+      ),
+      p(
+        [
+          attribute.class(
+            "relative mt-8 text-5xl font-black tracking-[-0.06em]",
+          ),
+        ],
+        [text(value), span([attribute.class("ml-1 text-2xl")], [text("%")])],
+      ),
+    ],
+  )
 }

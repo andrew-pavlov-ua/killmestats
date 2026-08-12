@@ -2,12 +2,9 @@ name = "client"
 version = "1.0.0"
 target = "javascript"
 
-# Fill out these fields if you intend to generate HTML documentation or publish
-# your project to the Hex package manager.
-#
 # description = ""
 # licences = ["Apache-2.0"]
-# repository = { type = "github", user = "", repo = "" }
+repository = { type = "github", user = "andrew-pavlov-ua", repo = "github.com/andrew-pavlov-ua/killmestats/" }
 # links = [{ title = "Website", href = "" }]
 #
 # For a full reference of all the available options, you can have a look at
@@ -26,3 +23,15 @@ gleam_httpc = ">= 5.0.0 and < 6.0.0"
 [dev_dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"
 lustre_dev_tools = ">= 2.3.6 and < 3.0.0"
+
+[tools.lustre.html]
+title = "killmestats"
+meta = [
+  { name = "description", content = "A live Gleam, Erlang, and OTP resilience experiment." }
+]
+links = [
+  { rel = "icon", type = "image/svg+xml", href = "/favicon.svg" }
+]
+scripts = [
+  { src = "/config.js" }
+]
