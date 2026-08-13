@@ -6,3 +6,8 @@ client-build:
 
 server-run:
 	cd server && gleam run
+
+format:
+	cd server && gleam format; \
+	cd ../client && gleam format; \
+	cd ../shared && gleam format

@@ -4,7 +4,7 @@ import gleam/int
 import gleam/list
 import gleam/string
 import lustre/attribute
-import lustre/element.{text, type Element}
+import lustre/element.{type Element, text}
 import lustre/element/html.{button, div, h1, main, p, span}
 import lustre/event
 import sysstats.{type SystemStats}
@@ -204,16 +204,7 @@ fn status_detail(status: ServerStatus) -> String {
       "status: Checking // waiting for the first response"
     system_stats.Alive -> "status: Alive // supervisor standing by"
     system_stats.ServerUnreachable(detail) ->
-      "status: Unreachable // " <> detail <> " // checking again in 1s"
-    system_stats.ServerDown(code) ->
-      "status: ServerDown("
-      <> int.to_string(code)
-      <> ") // checking again in 1s"
-    system_stats.RequestRejected(code) ->
-      "status: RequestRejected(" <> int.to_string(code) <> ")"
-    system_stats.InvalidResponse(detail) ->
-      "status: InvalidResponse // " <> detail
-    system_stats.ClientError(detail) -> "status: ClientError // " <> detail
+      "status: Unreachable // " <> detail <> " // reconnecting"
   }
 }
 

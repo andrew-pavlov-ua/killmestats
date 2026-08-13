@@ -20,6 +20,7 @@ fn handle_api(segments: List(String), req: Request) -> Response {
     [], Post -> ping.save_calculation()
     [], _ -> wisp.method_not_allowed([Get, Post])
 
+    // Keep an HTTP fallback for diagnostics and non-WebSocket clients
     ["stats"], Get -> stats.get_stats()
     ["panic"], Post -> panic_program()
 

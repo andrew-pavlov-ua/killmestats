@@ -50,12 +50,8 @@ fn status_badge_class(status: ServerStatus) -> String {
       "border-gleam-ink/20 bg-white/50 flex items-center gap-2 rounded-full border px-3 py-1.5 font-mono text-xs font-bold uppercase tracking-widest"
     system_stats.Checking ->
       "border-gleam-ink bg-gleam-yellow flex items-center gap-2 rounded-full border px-3 py-1.5 font-mono text-xs font-bold uppercase tracking-widest"
-    system_stats.ServerUnreachable(_) | system_stats.ServerDown(_) ->
+    system_stats.ServerUnreachable(_) ->
       "border-gleam-ink bg-red-100 flex items-center gap-2 rounded-full border px-3 py-1.5 font-mono text-xs font-bold uppercase tracking-widest"
-    system_stats.RequestRejected(_)
-    | system_stats.InvalidResponse(_)
-    | system_stats.ClientError(_) ->
-      "border-gleam-ink bg-orange-100 flex items-center gap-2 rounded-full border px-3 py-1.5 font-mono text-xs font-bold uppercase tracking-widest"
   }
 }
 
@@ -65,12 +61,8 @@ fn status_dot_class(status: ServerStatus) -> String {
       "bg-gleam-cyan border-gleam-ink size-2.5 rounded-full border"
     system_stats.Checking ->
       "bg-gleam-yellow border-gleam-ink size-2.5 rounded-full border"
-    system_stats.ServerUnreachable(_) | system_stats.ServerDown(_) ->
+    system_stats.ServerUnreachable(_) ->
       "bg-red-500 border-gleam-ink size-2.5 rounded-full border"
-    system_stats.RequestRejected(_)
-    | system_stats.InvalidResponse(_)
-    | system_stats.ClientError(_) ->
-      "bg-orange-500 border-gleam-ink size-2.5 rounded-full border"
   }
 }
 
@@ -79,9 +71,5 @@ fn status_label(status: ServerStatus) -> String {
     system_stats.Checking -> "checking"
     system_stats.Alive -> "still alive"
     system_stats.ServerUnreachable(_) -> "unreachable"
-    system_stats.ServerDown(_) -> "server down"
-    system_stats.RequestRejected(_) -> "request rejected"
-    system_stats.InvalidResponse(_) -> "invalid response"
-    system_stats.ClientError(_) -> "client error"
   }
 }
