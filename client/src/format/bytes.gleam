@@ -13,24 +13,29 @@ const gibibyte = 1_073_741_824
 
 pub fn human_readable(bytes: Int, add_suddix: Bool) -> String {
   case bytes {
-    bytes if bytes >= gibibyte -> case add_suddix {
-      True -> format(bytes, gibibyte, "GiB")
-      False -> format(bytes, gibibyte, "")
-    }
+    bytes if bytes >= gibibyte ->
+      case add_suddix {
+        True -> format(bytes, gibibyte, "GiB")
+        False -> format(bytes, gibibyte, "")
+      }
 
-    bytes if bytes >= mebibyte -> case add_suddix {
-      True -> format(bytes, mebibyte, "MiB")
-      False -> format(bytes, mebibyte, "")
-    }
-    bytes if bytes >= kibibyte -> case add_suddix {
-      True -> format(bytes, kibibyte, "MiB")
-      False -> format(bytes, kibibyte, "")
-    }
+    bytes if bytes >= mebibyte ->
+      case add_suddix {
+        True -> format(bytes, mebibyte, "MiB")
+        False -> format(bytes, mebibyte, "")
+      }
+    bytes if bytes >= kibibyte ->
+      case add_suddix {
+        True -> format(bytes, kibibyte, "MiB")
+        False -> format(bytes, kibibyte, "")
+      }
 
-    bytes -> int.to_string(bytes) <> case add_suddix {
-      True -> " B"
-      False -> ""
-    }
+    bytes ->
+      int.to_string(bytes)
+      <> case add_suddix {
+        True -> " B"
+        False -> ""
+      }
   }
 }
 
