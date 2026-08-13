@@ -15,12 +15,12 @@ pub fn get_stats() -> Response {
 @external(erlang, "stats", "cpu_load")
 fn cpu_load() -> Float
 
-@external(erlang, "stats", "ram_load")
-fn ram_load() -> Float
+@external(erlang, "stats", "memory_stats")
+fn memory_stats() -> #(Float, Int, Int)
 
 pub fn get_system_stats() -> SystemStats {
   let cpu_load = cpu_load()
-  let ram_load = ram_load()
+  let #(ram_load, ram_used_bytes, ram_total_bytes) = memory_stats()
 
   case cpu_load == 0.0 {
     True ->
@@ -38,5 +38,5 @@ pub fn get_system_stats() -> SystemStats {
     False -> Nil
   }
 
-  sysstats.SystemStats(cpu_load:, ram_load:)
+  sysstats.SystemStats(cpu_load:, ram_load:, ram_used_bytes:, ram_total_bytes:)
 }

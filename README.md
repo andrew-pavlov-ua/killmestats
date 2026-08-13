@@ -59,7 +59,7 @@ stats
 The server replies with a JSON text frame:
 
 ```json
-{"cpu_load":12.5,"ram_load":48.7}
+{"cpu_load":12.5,"ram_load":48.7,"ram_used_bytes":8036286464,"ram_total_bytes":17179869184}
 ```
 
 Binary frames and unknown text commands are ignored. WebSocket routing happens

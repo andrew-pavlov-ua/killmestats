@@ -17,7 +17,12 @@ fn init(_flags) {
   #(
     state.Model(
       page: state.Home,
-      stats: sysstats.SystemStats(cpu_load: 0.0, ram_load: 0.0),
+      stats: sysstats.SystemStats(
+        cpu_load: 0.0,
+        ram_load: 0.0,
+        ram_used_bytes: 0,
+        ram_total_bytes: 0,
+      ),
       server_status: system_stats.Checking,
       terminal_lines: [],
       socket: None,

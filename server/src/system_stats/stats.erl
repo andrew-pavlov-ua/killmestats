@@ -1,6 +1,6 @@
 -module(stats).
 
--export([cpu_load/0, ram_load/0]).
+-export([cpu_load/0, memory_stats/0]).
 
 cpu_load() ->
     ensure_os_mon_started(),
@@ -11,14 +11,15 @@ cpu_load() ->
         _Class:_Reason -> 0.0
     end.
 
-ram_load() ->
+memory_stats() ->
     ensure_os_mon_started(),
     MemData = memsup:get_system_memory_data(),
 
     Total = proplists:get_value(total_memory, MemData, 1),
     Available = proplists:get_value(available_memory, MemData, 1),
+    Used = max(Total - Available, 0),
 
-    clamp((Total - Available) / Total * 100).
+    {clamp(Used / Total * 100), Used, Total}.
 
 ensure_os_mon_started() ->
     _ = application:ensure_all_started(os_mon),

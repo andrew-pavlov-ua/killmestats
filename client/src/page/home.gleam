@@ -1,4 +1,5 @@
 import api/system_stats.{type ServerStatus}
+import format/bytes
 import gleam/float
 import gleam/int
 import gleam/list
@@ -15,14 +16,17 @@ pub fn view(
   terminal_lines: List(String),
   panic_clicked: msg,
 ) {
-  let #(rounded_cpu_load, rounded_ram_load) = case status {
+  let #(rounded_cpu_load, ram_usage) = case status {
     system_stats.Alive -> #(
       stats.cpu_load
         |> float.round
         |> int.to_string,
-      stats.ram_load
-        |> float.round
-        |> int.to_string,
+      // bytes.compact_gibibytes(stats.ram_used_bytes, False)
+      bytes.human_readable(stats.ram_used_bytes, False)
+        <> "/"
+        <> bytes.compact_gibibytes(stats.ram_total_bytes, True)
+        // <> bytes.human_readable(stats.ram_total_bytes, True)
+        <> " GB",
     )
 
     _ -> #("--", "--")
@@ -130,8 +134,20 @@ pub fn view(
             ],
           ),
           div([attribute.class("grid gap-4 sm:grid-cols-2")], [
-            stat_card("CPU load", rounded_cpu_load, "bg-gleam-pink"),
-            stat_card("RAM load", rounded_ram_load, "bg-gleam-cyan"),
+            stat_card(
+              "CPU load",
+              rounded_cpu_load,
+              "%",
+              "text-4xl",
+              "bg-gleam-pink",
+            ),
+            stat_card(
+              "RAM usage",
+              ram_usage,
+              "",
+              "whitespace-nowrap text-[1.75rem]",
+              "bg-gleam-cyan",
+            ),
           ]),
           p(
             [
@@ -208,7 +224,13 @@ fn status_detail(status: ServerStatus) -> String {
   }
 }
 
-fn stat_card(label: String, value: String, accent: String) {
+fn stat_card(
+  label: String,
+  value: String,
+  suffix: String,
+  value_class: String,
+  accent: String,
+) {
   div(
     [
       attribute.class(
@@ -237,10 +259,10 @@ fn stat_card(label: String, value: String, accent: String) {
       p(
         [
           attribute.class(
-            "relative mt-8 text-5xl font-black tracking-[-0.06em]",
+            "relative mt-8 font-black tracking-[-0.06em] " <> value_class,
           ),
         ],
-        [text(value), span([attribute.class("ml-1 text-2xl")], [text("%")])],
+        [text(value), span([attribute.class("ml-1")], [text(suffix)])],
       ),
     ],
   )

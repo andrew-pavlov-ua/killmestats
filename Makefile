@@ -11,3 +11,8 @@ format:
 	cd server && gleam format; \
 	cd ../client && gleam format; \
 	cd ../shared && gleam format
+
+test:
+	cd server && gleam test; \
+	cd ../client && gleam test; \
+	cd ../shared && gleam test; \
