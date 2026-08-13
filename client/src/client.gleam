@@ -1,4 +1,3 @@
-import api/system_stats
 import gleam/option.{None}
 import lustre
 import sysstats
@@ -23,11 +22,14 @@ fn init(_flags) {
         ram_used_bytes: 0,
         ram_total_bytes: 0,
       ),
-      server_status: system_stats.Checking,
+      server_status: state.Checking,
       terminal_lines: [],
-      socket: None,
       connection_timed_out: False,
+      socket: None,
+      primary_connection_id: 0,
+      connections: [],
+      next_connection_id: 0,
     ),
-    update.connect_websocket(),
+    update.connect_websocket(0),
   )
 }

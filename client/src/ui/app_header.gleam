@@ -1,4 +1,4 @@
-import api/system_stats.{type ServerStatus}
+import app/state.{type ServerStatus}
 import lustre/attribute
 import lustre/element.{type Element, text}
 import lustre/element/html.{div, header, span}
@@ -46,30 +46,30 @@ fn status_indicator(status: ServerStatus) -> Element(msg) {
 
 fn status_badge_class(status: ServerStatus) -> String {
   case status {
-    system_stats.Alive ->
+    state.Alive ->
       "border-gleam-ink/20 bg-white/50 flex items-center gap-2 rounded-full border px-3 py-1.5 font-mono text-xs font-bold uppercase tracking-widest"
-    system_stats.Checking ->
+    state.Checking ->
       "border-gleam-ink bg-gleam-yellow flex items-center gap-2 rounded-full border px-3 py-1.5 font-mono text-xs font-bold uppercase tracking-widest"
-    system_stats.ServerUnreachable(_) ->
+    state.ServerUnreachable(_) ->
       "border-gleam-ink bg-red-100 flex items-center gap-2 rounded-full border px-3 py-1.5 font-mono text-xs font-bold uppercase tracking-widest"
   }
 }
 
 fn status_dot_class(status: ServerStatus) -> String {
   case status {
-    system_stats.Alive ->
+    state.Alive ->
       "bg-gleam-cyan border-gleam-ink size-2.5 rounded-full border"
-    system_stats.Checking ->
+    state.Checking ->
       "bg-gleam-yellow border-gleam-ink size-2.5 rounded-full border"
-    system_stats.ServerUnreachable(_) ->
+    state.ServerUnreachable(_) ->
       "bg-red-500 border-gleam-ink size-2.5 rounded-full border"
   }
 }
 
 fn status_label(status: ServerStatus) -> String {
   case status {
-    system_stats.Checking -> "checking"
-    system_stats.Alive -> "still alive"
-    system_stats.ServerUnreachable(_) -> "unreachable"
+    state.Checking -> "checking"
+    state.Alive -> "still alive"
+    state.ServerUnreachable(_) -> "unreachable"
   }
 }

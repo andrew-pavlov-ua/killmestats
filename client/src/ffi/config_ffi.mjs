@@ -14,3 +14,12 @@ export function defaultApiHost() {
 
   return "";
 }
+
+export function maxSocketConnections() {
+  const raw = globalThis.__KILLMESTATS_CONFIG__?.maxConnections;
+  const maxConnections = Number.parseInt(raw, 10);
+
+  return Number.isInteger(maxConnections) && maxConnections > 0
+    ? maxConnections
+    : 1000;
+}

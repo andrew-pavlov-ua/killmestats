@@ -1,17 +1,16 @@
 import api/api_client
 import api/error
-import api/system_stats
 import app/state
 import ffi/timer
 import gleam/io
 import gleam/json
 import gleam/option.{None, Some}
 import gleam/string
-import gleam/uri.{Uri}
 import log
 import lustre/effect.{type Effect}
 import lustre_websocket as websocket
 import sysstats
+import app/extra_websocket as su
 
 const poll_interval_ms = 1000
 
@@ -26,61 +25,83 @@ pub fn update(
   msg: state.Msg,
 ) -> #(state.Model, Effect(state.Msg)) {
   case msg {
-    state.SocketEvent(websocket.InvalidUrl) -> {
+    state.AddConnection -> su.add_connection(model)
+    state.RemoveConnection -> su.remove_connection(model)
+    state.SetConnectionCount(value) -> su.set_connection_count(model, value)
+    state.ExtraSocketEvent(id, event) -> su.update_extra_socket(model, id, event)
+    state.ExtraTick(id) -> su.poll_extra_socket(model, id)
+    state.SocketEvent(id, event) if id != model.primary_connection_id ->
+      case event {
+        websocket.OnOpen(socket) -> #(model, websocket.close(socket))
+        _ -> #(model, effect.none())
+      }
+    state.SocketEvent(_, websocket.InvalidUrl) -> {
       io.print_error("Invalid WebSocket URL\n")
       #(
         state.Model(
           ..model,
-          server_status: system_stats.ServerUnreachable("Invalid WebSocket URL"),
+          server_status: state.ServerUnreachable("Invalid WebSocket URL"),
         ),
         effect.none(),
       )
     }
-    state.SocketEvent(websocket.OnOpen(socket)) -> {
+    state.SocketEvent(_, websocket.OnOpen(socket)) -> {
       #(
         state.Model(
           ..model,
           socket: Some(socket),
           connection_timed_out: False,
-          server_status: system_stats.Alive,
+          server_status: state.Alive,
         ),
         websocket.send(socket, "stats"),
       )
     }
-    state.SocketEvent(websocket.OnTextMessage(payload)) -> {
+    state.SocketEvent(id, websocket.OnTextMessage(payload)) -> {
       case json.parse(payload, sysstats.decoder()) {
         Ok(stats) -> #(
-          state.Model(..model, stats: stats, server_status: system_stats.Alive),
-          schedule_next_fetch(),
+          state.Model(..model, stats: stats, server_status: state.Alive),
+          schedule_next_fetch(id),
         )
         Error(err) -> {
           log.error(
             "Invalid SystemStats WebSocket message: "
             <> error.json_decode_message(err),
           )
-          #(model, schedule_next_fetch())
+          #(model, schedule_next_fetch(id))
         }
       }
     }
-    state.Tick -> {
+    state.Tick(id) if id != model.primary_connection_id -> #(
+      model,
+      effect.none(),
+    )
+    state.Tick(id) -> {
       case model.socket {
         Some(socket) -> #(model, websocket.send(socket, "stats"))
 
-        None -> #(model, connect_websocket())
+        None -> #(model, connect_websocket(id))
       }
     }
-    state.ConnectionTimedOut -> {
+    state.ConnectionTimedOut(id) if id != model.primary_connection_id -> #(
+      model,
+      effect.none(),
+    )
+    state.ConnectionTimedOut(id) -> {
       case model.socket {
-        None -> #(
-          state.Model(
-            ..model,
-            connection_timed_out: True,
-            server_status: system_stats.ServerUnreachable(
-              "WebSocket connection timed out",
+        None -> {
+          let next_id = id + 1
+          #(
+            state.Model(
+              ..model,
+              primary_connection_id: next_id,
+              connection_timed_out: True,
+              server_status: state.ServerUnreachable(
+                "WebSocket connection timed out",
+              ),
             ),
-          ),
-          effect.none(),
-        )
+            schedule_reconnect(next_id),
+          )
+        }
         Some(_) -> #(model, effect.none())
       }
     }
@@ -89,55 +110,46 @@ pub fn update(
       panic_server(),
     )
 
-    state.SocketEvent(websocket.OnBinaryMessage(_)) -> #(model, effect.none())
-    state.SocketEvent(websocket.OnClose(reason)) -> {
+    state.SocketEvent(_, websocket.OnBinaryMessage(_)) -> #(
+      model,
+      effect.none(),
+    )
+    state.SocketEvent(id, websocket.OnClose(reason)) -> {
       io.print_error("WebSocket closed: " <> string.inspect(reason) <> "\n")
 
       let server_status = case model.connection_timed_out {
-        True -> system_stats.ServerUnreachable("WebSocket disconnected")
-        False -> system_stats.Checking
+        True -> state.ServerUnreachable("WebSocket disconnected")
+        False -> state.Checking
       }
 
+      let next_id = id + 1
       #(
-        state.Model(..model, socket: None, server_status: server_status),
-        schedule_reconnect(),
+        state.Model(
+          ..model,
+          socket: None,
+          primary_connection_id: next_id,
+          server_status: server_status,
+        ),
+        schedule_reconnect(next_id),
       )
     }
   }
 }
 
-pub fn websocket_url() -> String {
-  // Selecting ws_url depending on env (dev/prod)
-  case websocket.page_uri() {
-    Ok(uri) if uri.port == Some(1234) ->
-      Uri(
-        ..uri,
-        scheme: Some("ws"),
-        port: Some(8000),
-        path: "/api/ws",
-        query: None,
-        fragment: None,
-      )
-      |> uri.to_string
-
-    _ -> "/api/ws"
-  }
-}
-
-pub fn connect_websocket() -> Effect(state.Msg) {
+pub fn connect_websocket(id: Int) -> Effect(state.Msg) {
   // The timeout is not cancelled; it is harmless after the socket opens.
   effect.batch([
-    websocket.init(websocket_url(), state.SocketEvent),
-    timer.after(connection_timeout_ms, state.ConnectionTimedOut),
+    websocket.init(su.websocket_url(), fn(event) { state.SocketEvent(id, event) }),
+    timer.after(connection_timeout_ms, state.ConnectionTimedOut(id)),
   ])
 }
 
-fn schedule_next_fetch() -> Effect(state.Msg) {
-  timer.after(poll_interval_ms, state.Tick)
+fn schedule_next_fetch(id: Int) -> Effect(state.Msg) {
+  timer.after(poll_interval_ms, state.Tick(id))
 }
 
-fn schedule_reconnect() -> Effect(state.Msg) {
-  timer.after(reconnect_interval_ms, state.Tick)
+fn schedule_reconnect(id: Int) -> Effect(state.Msg) {
+  timer.after(reconnect_interval_ms, state.Tick(id))
 }
 
 fn panic_server() -> Effect(state.Msg) {

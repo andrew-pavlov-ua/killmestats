@@ -42,10 +42,55 @@ gleam run -m lustre/dev start
 Open `http://localhost:1234` in a browser. The client connects directly to
 `ws://localhost:8000/api/ws` during local development.
 
-The initial connection is shown as `Checking`. If it cannot open within five
+The initial connection is shown as `Checking`. If it cannot open within four
 seconds, the UI reports the server as unreachable. Closed connections are
 retried every 250 milliseconds and a successful connection returns the status
 to `Alive`.
+
+## Client configuration
+
+Browser code cannot read operating-system environment variables directly. The
+client therefore loads `/config.js` before its compiled JavaScript bundle and
+reads `globalThis.__KILLMESTATS_CONFIG__` through a small JavaScript foreign
+function interface.
+
+The configuration source depends on how the application is run:
+
+- Local development uses `client/assets/config.js`. Lustre copies this file to
+  `client/dist/config.js` when starting or building the client. Edit the asset,
+  not the generated file.
+- Docker production uses `client/config.js.template`. At container startup,
+  Nginx substitutes `API_HOST` and `MAX_CONNECTIONS` from the container
+  environment and writes the resulting `config.js` into its web root.
+
+`API_HOST` is the HTTP origin used for API requests. Leave it empty to use
+`http://localhost:8000` with the local Lustre server or same-origin `/api`
+requests behind Nginx. `MAX_CONNECTIONS` is the application-level ceiling for
+the WebSocket connection control. Invalid or missing values use the fallback
+defined in `client/src/ffi/config_ffi.mjs`.
+
+For Docker, copy `.example.env` to `.env` and adjust the values before starting
+the services:
+
+```env
+API_HOST=
+MAX_CONNECTIONS=100
+```
+
+Then recreate the web container after changing runtime configuration:
+
+```sh
+docker compose up -d --force-recreate web
+```
+
+The application limit does not override limits imposed by the browser or
+operating system. Firefox currently defaults to 200 concurrent WebSocket
+sessions across the browser through its `network.websocket.max-connections`
+preference. Consequently, the page may settle slightly below 200 when other
+pages or browser features already hold WebSockets. This preference can be
+inspected in `about:config`, but increasing it substantially can consume large
+amounts of browser, OS, and server resources. See the
+[Firefox networking defaults](https://searchfox.org/firefox-main/source/modules/libpref/init/all.js).
 
 ## WebSocket protocol
 

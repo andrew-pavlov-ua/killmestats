@@ -1,3 +1,5 @@
+import config
+import gleam/list
 import lustre/element.{type Element}
 import page/home
 import ui/app_header
@@ -14,6 +16,11 @@ pub fn view(model: state.Model) -> Element(state.Msg) {
         model.stats,
         model.server_status,
         model.terminal_lines,
+        list.length(model.connections) + 1,
+        config.max_socket_connections(),
+        state.RemoveConnection,
+        state.AddConnection,
+        state.SetConnectionCount,
         state.UserClickedPanic,
       )
   }

@@ -9,3 +9,7 @@ pub fn api_base_url() -> String {
     api_host -> api_host
   }
 }
+
+pub fn max_socket_connections() -> Int {
+  config_ffi.max_socket_connections()
+}

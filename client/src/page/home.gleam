@@ -1,4 +1,4 @@
-import api/system_stats.{type ServerStatus}
+import app/state.{type ServerStatus}
 import format/bytes
 import gleam/float
 import gleam/int
@@ -6,7 +6,7 @@ import gleam/list
 import gleam/string
 import lustre/attribute
 import lustre/element.{type Element, text}
-import lustre/element/html.{button, div, h1, main, p, span}
+import lustre/element/html.{button, div, h1, input, main, p, span}
 import lustre/event
 import sysstats.{type SystemStats}
 
@@ -14,10 +14,15 @@ pub fn view(
   stats: SystemStats,
   status: ServerStatus,
   terminal_lines: List(String),
+  connection_count: Int,
+  max_connections: Int,
+  remove_connection: msg,
+  add_connection: msg,
+  set_connection_count: fn(String) -> msg,
   panic_clicked: msg,
 ) {
   let #(rounded_cpu_load, ram_usage) = case status {
-    system_stats.Alive -> #(
+    state.Alive -> #(
       stats.cpu_load
         |> float.round
         |> int.to_string,
@@ -157,8 +162,77 @@ pub fn view(
             ],
             [text(status_detail(status))],
           ),
+          connection_controls(
+            connection_count,
+            max_connections,
+            remove_connection,
+            add_connection,
+            set_connection_count,
+          ),
           terminal(terminal_lines),
         ],
+      ),
+    ],
+  )
+}
+
+fn connection_controls(
+  count: Int,
+  max_connections: Int,
+  remove_connection: msg,
+  add_connection: msg,
+  set_connection_count: fn(String) -> msg,
+) {
+  div(
+    [
+      attribute.class(
+        "border-gleam-ink/20 mt-6 flex items-center justify-between rounded-xl border bg-gleam-cream/40 p-2",
+      ),
+    ],
+    [
+      button(
+        [
+          attribute.class(
+            "border-gleam-ink grid size-9 place-items-center rounded-lg border-2 bg-white font-mono text-xl font-black disabled:cursor-not-allowed disabled:opacity-30",
+          ),
+          attribute.disabled(count <= 1),
+          attribute.attribute("aria-label", "Remove WebSocket connection"),
+          event.on_click(remove_connection),
+        ],
+        [text("−")],
+      ),
+      div([attribute.class("text-center font-mono")], [
+        input([
+          attribute.class(
+            "w-16 bg-transparent text-center text-lg font-black outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+          ),
+          attribute.type_("number"),
+          attribute.inputmode("numeric"),
+          attribute.min("1"),
+          attribute.max(int.to_string(max_connections)),
+          attribute.value(int.to_string(count)),
+          attribute.attribute("aria-label", "WebSocket connection count"),
+          event.on_change(set_connection_count),
+        ]),
+        p(
+          [
+            attribute.class(
+              "text-[0.65rem] font-bold uppercase tracking-widest opacity-60",
+            ),
+          ],
+          [text("connections")],
+        ),
+      ]),
+      button(
+        [
+          attribute.class(
+            "border-gleam-ink bg-gleam-cyan grid size-9 place-items-center rounded-lg border-2 font-mono text-xl font-black disabled:cursor-not-allowed disabled:opacity-30",
+          ),
+          attribute.disabled(count >= max_connections),
+          attribute.attribute("aria-label", "Add WebSocket connection"),
+          event.on_click(add_connection),
+        ],
+        [text("+")],
       ),
     ],
   )
@@ -216,10 +290,9 @@ fn terminal_line(line: String) -> Element(msg) {
 
 fn status_detail(status: ServerStatus) -> String {
   case status {
-    system_stats.Checking ->
-      "status: Checking // waiting for the first response"
-    system_stats.Alive -> "status: Alive // supervisor standing by"
-    system_stats.ServerUnreachable(detail) ->
+    state.Checking -> "status: Checking // waiting for the first response"
+    state.Alive -> "status: Alive // supervisor standing by"
+    state.ServerUnreachable(detail) ->
       "status: Unreachable // " <> detail <> " // reconnecting"
   }
 }
