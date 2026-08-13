@@ -1,5 +1,6 @@
 import api/api_client
 import api/error
+import app/extra_websocket as su
 import app/state
 import ffi/timer
 import gleam/io
@@ -10,7 +11,6 @@ import log
 import lustre/effect.{type Effect}
 import lustre_websocket as websocket
 import sysstats
-import app/extra_websocket as su
 
 const poll_interval_ms = 1000
 
@@ -28,7 +28,8 @@ pub fn update(
     state.AddConnection -> su.add_connection(model)
     state.RemoveConnection -> su.remove_connection(model)
     state.SetConnectionCount(value) -> su.set_connection_count(model, value)
-    state.ExtraSocketEvent(id, event) -> su.update_extra_socket(model, id, event)
+    state.ExtraSocketEvent(id, event) ->
+      su.update_extra_socket(model, id, event)
     state.ExtraTick(id) -> su.poll_extra_socket(model, id)
     state.SocketEvent(id, event) if id != model.primary_connection_id ->
       case event {
@@ -139,7 +140,9 @@ pub fn update(
 pub fn connect_websocket(id: Int) -> Effect(state.Msg) {
   // The timeout is not cancelled; it is harmless after the socket opens.
   effect.batch([
-    websocket.init(su.websocket_url(), fn(event) { state.SocketEvent(id, event) }),
+    websocket.init(su.websocket_url(), fn(event) {
+      state.SocketEvent(id, event)
+    }),
     timer.after(connection_timeout_ms, state.ConnectionTimedOut(id)),
   ])
 }

@@ -57,8 +57,7 @@ fn status_badge_class(status: ServerStatus) -> String {
 
 fn status_dot_class(status: ServerStatus) -> String {
   case status {
-    state.Alive ->
-      "bg-gleam-cyan border-gleam-ink size-2.5 rounded-full border"
+    state.Alive -> "bg-gleam-cyan border-gleam-ink size-2.5 rounded-full border"
     state.Checking ->
       "bg-gleam-yellow border-gleam-ink size-2.5 rounded-full border"
     state.ServerUnreachable(_) ->

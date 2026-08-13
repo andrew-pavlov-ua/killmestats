@@ -16,7 +16,6 @@ const poll_interval_ms = 1000
 
 const connection_timeout_ms = 4000
 
-
 // Separate funcs for testability
 pub fn set_connection_count(model: state.Model, value: String) {
   set_connection_count_at(model, value, websocket_url())
