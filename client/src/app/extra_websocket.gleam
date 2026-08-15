@@ -1,16 +1,12 @@
-import api/error
 import app/state
 import config
 import ffi/timer
 import gleam/int
-import gleam/json
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/uri.{Uri}
-import log
 import lustre/effect.{type Effect}
 import lustre_websocket as websocket
-import sysstats
 
 const poll_interval_ms = 1000
 
@@ -122,25 +118,10 @@ pub fn update_extra_socket(
         }
       }
     }
-    websocket.OnTextMessage(payload) ->
-      // Other extra socket's payload could be here, but for now it's the same as primary has
-
+    websocket.OnTextMessage(_) ->
       case connection_exists(model.connections, id) {
         False -> #(model, effect.none())
-        True ->
-          case json.parse(payload, sysstats.decoder()) {
-            Ok(stats) -> #(
-              state.Model(..model, stats: stats, server_status: state.Alive),
-              schedule_extra_fetch(id),
-            )
-            Error(err) -> {
-              log.error(
-                "Invalid SystemStats WebSocket message: "
-                <> error.json_decode_message(err),
-              )
-              #(model, schedule_extra_fetch(id))
-            }
-          }
+        True -> #(model, schedule_extra_fetch(id))
       }
     websocket.OnBinaryMessage(_) -> #(model, effect.none())
     websocket.InvalidUrl -> #(remove_extra_connection(model, id), effect.none())
@@ -201,7 +182,6 @@ fn schedule_extra_fetch(id: Int) -> Effect(state.Msg) {
 }
 
 pub fn websocket_url() -> String {
-  // Selecting ws_url depending on env (dev/prod)
   case websocket.page_uri() {
     Ok(uri) if uri.port == Some(1234) ->
       Uri(

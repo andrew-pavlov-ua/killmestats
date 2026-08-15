@@ -2,15 +2,17 @@ import api/api_client
 import api/error
 import app/extra_websocket as su
 import app/state
+import data
 import ffi/timer
 import gleam/io
 import gleam/json
+import gleam/list
 import gleam/option.{None, Some}
 import gleam/string
 import log
 import lustre/effect.{type Effect}
 import lustre_websocket as websocket
-import sysstats
+import ui/charts
 
 const poll_interval_ms = 1000
 
@@ -58,14 +60,38 @@ pub fn update(
       )
     }
     state.SocketEvent(id, websocket.OnTextMessage(payload)) -> {
-      case json.parse(payload, sysstats.decoder()) {
-        Ok(stats) -> #(
-          state.Model(..model, stats: stats, server_status: state.Alive),
-          schedule_next_fetch(id),
-        )
+      case json.parse(payload, data.decoder()) {
+        Ok(data) -> {
+          let cpu_history =
+            charts.values(
+              data.time_stats_list,
+              fn(sample) { sample.stats.cpu_load },
+              data.latest_stats.cpu_load,
+            )
+          let ram_history =
+            charts.values(
+              data.time_stats_list,
+              fn(sample) { sample.stats.ram_load },
+              data.latest_stats.ram_load,
+            )
+          let timestamps =
+            list.map(data.time_stats_list, fn(sample) { sample.timestamp_ms })
+
+          #(
+            state.Model(
+              ..model,
+              stats: data.latest_stats,
+              server_status: state.Alive,
+            ),
+            effect.batch([
+              schedule_next_fetch(id),
+              charts.render(cpu_history, ram_history, timestamps),
+            ]),
+          )
+        }
         Error(err) -> {
           log.error(
-            "Invalid SystemStats WebSocket message: "
+            "Invalid stats WebSocket message: "
             <> error.json_decode_message(err),
           )
           #(model, schedule_next_fetch(id))

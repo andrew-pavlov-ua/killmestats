@@ -6,9 +6,10 @@ import gleam/list
 import gleam/string
 import lustre/attribute
 import lustre/element.{type Element, text}
-import lustre/element/html.{button, div, h1, input, main, p, span}
+import lustre/element/html.{button, div, h1, h2, input, main, p, span}
 import lustre/event
 import sysstats.{type SystemStats}
+import ui/charts
 
 pub fn view(
   stats: SystemStats,
@@ -172,6 +173,104 @@ pub fn view(
             set_connection_count,
           ),
           terminal(terminal_lines),
+        ],
+      ),
+      div(
+        [
+          attribute.class(
+            "border-gleam-ink/25 relative overflow-hidden rounded-card border bg-white p-5 shadow-[0_12px_35px_rgb(47_41_51/0.10)] sm:col-span-2 sm:p-7",
+          ),
+        ],
+        [
+          div(
+            [
+              attribute.class(
+                "border-gleam-ink/20 flex flex-col gap-4 border-b pb-5 sm:flex-row sm:items-end sm:justify-between",
+              ),
+            ],
+            [
+              div([], [
+                p(
+                  [
+                    attribute.class(
+                      "font-mono text-xs font-bold uppercase tracking-[0.2em] opacity-60",
+                    ),
+                  ],
+                  [text("/// telemetry")],
+                ),
+                h2(
+                  [
+                    attribute.id("system-history-heading"),
+                    attribute.class(
+                      "mt-2 text-3xl font-black tracking-[-0.04em] text-balance",
+                    ),
+                  ],
+                  [text("System History")],
+                ),
+                p(
+                  [
+                    attribute.class(
+                      "mt-2 max-w-2xl font-medium leading-relaxed opacity-70 text-pretty",
+                    ),
+                  ],
+                  [
+                    text(
+                      "Watch CPU and memory change as the supervisor keeps the system running.",
+                    ),
+                  ],
+                ),
+              ]),
+              div(
+                [
+                  attribute.class(
+                    "border-gleam-ink/30 bg-gleam-cyan/80 inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 font-mono text-xs font-black uppercase tracking-widest shadow-sm",
+                  ),
+                ],
+                [
+                  span(
+                    [
+                      attribute.class(
+                        "border-gleam-ink/40 size-2 rounded-full border bg-white",
+                      ),
+                      attribute.attribute("aria-hidden", "true"),
+                    ],
+                    [],
+                  ),
+                  text("Live Data"),
+                ],
+              ),
+            ],
+          ),
+          div(
+            [
+              attribute.id("charts"),
+              attribute.class(
+                "border-gleam-ink/20 relative mt-6 min-h-96 overflow-hidden rounded-2xl border bg-gleam-cream/50 shadow-[0_6px_20px_rgb(47_41_51/0.08)]",
+              ),
+              attribute.attribute("role", "group"),
+              attribute.attribute("aria-labelledby", "system-history-heading"),
+            ],
+            [
+              div(
+                [
+                  attribute.class("border-gleam-ink/10 flex h-1.5 border-b"),
+                  attribute.attribute("aria-hidden", "true"),
+                ],
+                [
+                  span([attribute.class("w-1/2 bg-gleam-pink")], []),
+                  span([attribute.class("w-1/2 bg-gleam-cyan")], []),
+                ],
+              ),
+              div(
+                [
+                  attribute.class(
+                    "relative z-10 flex min-h-96 min-w-0 items-center px-3 py-4 sm:px-6 sm:py-5",
+                  ),
+                ],
+                [charts.view()],
+              ),
+            ],
+          ),
         ],
       ),
     ],

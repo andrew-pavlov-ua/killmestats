@@ -1,12 +1,14 @@
-import data
+import data.{Data}
 import dream_ets/config
-import dream_ets/table
-import sysstats
 import dream_ets/operations
+import dream_ets/table
 import gleam/dynamic
 import gleam/dynamic/decode
-import gleam/time/timestamp.{type Timestamp}
+import gleam/int
 import gleam/list
+import gleam/time/timestamp.{type Timestamp}
+import log
+import sysstats
 
 pub type Context {
   Context(cache: table.Table(timestamp.Timestamp, sysstats.SystemStats))
@@ -23,19 +25,24 @@ pub fn create_cache() -> Result(
   |> config.create()
 }
 
-
-pub fn cache_system_stats(
+pub fn handle_cache(
   context: Context,
   stats: sysstats.SystemStats,
-) -> Result(Bool, table.EtsError) {
+) -> Result(data.Data, table.EtsError) {
   let now = timestamp.system_time()
   let #(unix_seconds, _) = timestamp.to_unix_seconds_and_nanoseconds(now)
 
-  // the same as unix_seconds - { unix_seconds % 60 }
   let minute_seconds = unix_seconds / 60 * 60
   let minute = timestamp.from_unix_seconds(minute_seconds)
 
-  operations.insert_new(context.cache, minute, stats)
+  case operations.insert_new(context.cache, minute, stats) {
+    Ok(_) ->
+      Ok(Data(latest_stats: stats, time_stats_list: read_whole_cache(context)))
+    Error(error) -> {
+      log.error("handle_cache error: failed to insert stats")
+      Error(error)
+    }
+  }
 }
 
 fn timestamp_encoder(value: Timestamp) -> dynamic.Dynamic {
@@ -67,23 +74,17 @@ fn stats_encoder(stats: sysstats.SystemStats) -> dynamic.Dynamic {
   ])
 }
 
-pub fn read_whole_cache(context: Context) -> data.Data {
-  let pairs = operations.to_list(context.cache)
+pub fn read_whole_cache(context: Context) -> List(data.TimeStats) {
+  operations.to_list(context.cache)
+  |> list.map(fn(pair) {
+    let #(key, value) = pair
+    let #(seconds, nanoseconds) = timestamp.to_unix_seconds_and_nanoseconds(key)
 
-  let time_stats_list =
-    list.map(pairs, fn(pair) {
-      let #(key, value) = pair
-      let #(seconds, nanoseconds) =
-        timestamp.to_unix_seconds_and_nanoseconds(key)
+    let timestamp_ms = seconds * 1000 + nanoseconds / 1_000_000
 
-      let timestamp_ms =
-      seconds * 1000 + nanoseconds / 1_000_000
-
-      data.TimeStats(
-        timestamp_ms:,
-        stats: value,
-      )
-    })
-
-  data.Data(time_stats_list:)
+    data.TimeStats(timestamp_ms:, stats: value)
+  })
+  |> list.sort(by: fn(stat1, stat2) {
+    int.compare(stat1.timestamp_ms, stat2.timestamp_ms)
+  })
 }

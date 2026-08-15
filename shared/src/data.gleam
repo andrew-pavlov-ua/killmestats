@@ -4,38 +4,31 @@ import gleam/json.{type Json}
 import sysstats
 
 pub type Data {
-  Data(
-    // system_stats: sysstats.SystemStats,
-
-    // the client would show the latest item in this list
-    time_stats_list: List(TimeStats)
-  )
+  Data(latest_stats: sysstats.SystemStats, time_stats_list: List(TimeStats))
 }
 
 pub type TimeStats {
-  TimeStats(
-    timestamp_ms: Int,
-    stats: sysstats.SystemStats
-  )
+  TimeStats(timestamp_ms: Int, stats: sysstats.SystemStats)
 }
 
 fn encode_time_stats(ts: TimeStats) -> Json {
   json.object([
     #("timestamp_ms", json.int(ts.timestamp_ms)),
-    #("systemStats", sysstats.to_json(ts.stats))
+    #("systemStats", sysstats.to_json(ts.stats)),
   ])
 }
 
 pub fn to_json(data: Data) -> Json {
-  let list_json_string =
-    json.array(data.time_stats_list, of: encode_time_stats)
+  let time_stats_json = json.array(data.time_stats_list, of: encode_time_stats)
 
   json.object([
-    #("data",
+    #(
+      "data",
       json.object([
-        #("timeStatsList", list_json_string)
-      ])
-    )
+        #("latestStats", sysstats.to_json(data.latest_stats)),
+        #("timeStatsList", time_stats_json),
+      ]),
+    ),
   ])
 }
 
@@ -52,5 +45,10 @@ pub fn decoder() -> Decoder(Data) {
     decode.list(of: time_stats_decoder()),
   )
 
-  decode.success(Data(time_stats_list:))
+  use latest_stats <- decode.subfield(
+    ["data", "latestStats"],
+    sysstats.decoder(),
+  )
+
+  decode.success(Data(time_stats_list:, latest_stats:))
 }

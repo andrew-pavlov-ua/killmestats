@@ -35,5 +35,6 @@ links = [
   { rel = "icon", type = "image/svg+xml", href = "/favicon.svg" }
 ]
 scripts = [
-  { src = "/config.js" }
+  { src = "/config.js" },
+  { src = "/chart.umd.min.js" }
 ]

@@ -1,13 +1,19 @@
 import app/extra_websocket
 import app/state
 import app/update
+import gleam/int
 import gleam/list
 import gleam/option.{None}
 import gleeunit
 import sysstats
+import ui/charts
 
 pub fn main() -> Nil {
   gleeunit.main()
+}
+
+pub fn chart_values_append_latest_sample_test() {
+  assert charts.values([1, 2], int.to_float, 3.0) == [1.0, 2.0, 3.0]
 }
 
 pub fn add_connection_prepends_new_connection_test() {

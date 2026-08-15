@@ -1,12 +1,12 @@
-import log
 import cache
+import data
 import gleam/http/request
 import gleam/http/response.{type Response}
 import gleam/json
 import gleam/option.{None}
+import log
 import mist
 
-import sysstats
 import system_stats/stats
 
 /// Routes WebSocket upgrades before passing ordinary HTTP requests to Wisp.
@@ -58,29 +58,23 @@ fn handle_stats(
 ) -> mist.Next(Nil, Nil) {
   let stats = stats.get_system_stats()
 
-  case cache.cache_system_stats(context, stats) {
-    Ok(_) -> Nil
+  case cache.handle_cache(context, stats) {
+    Ok(data) -> send_stats(connection, state, data)
     Error(_) -> {
       log.error("handle_stats: error caching stats: EtsError")
-      Nil
+      mist.continue(state)
     }
   }
-
-  cache.read_whole_cache(context)
-
-  // TODO
-
-  send_stats(connection, state, stats)
 }
 
 fn send_stats(
   connection: mist.WebsocketConnection,
   state: Nil,
-  stats: sysstats.SystemStats,
+  data: data.Data,
 ) -> mist.Next(Nil, Nil) {
   let payload =
-    stats
-    |> sysstats.to_json
+    data
+    |> data.to_json
     |> json.to_string
 
   case mist.send_text_frame(connection, payload) {

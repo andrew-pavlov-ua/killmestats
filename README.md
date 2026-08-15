@@ -101,10 +101,31 @@ command whenever it wants the current sample:
 stats
 ```
 
-The server replies with a JSON text frame:
+The server replies with the latest reading and one cached sample per minute.
+History is ordered from oldest to newest:
 
 ```json
-{"cpu_load":12.5,"ram_load":48.7,"ram_used_bytes":8036286464,"ram_total_bytes":17179869184}
+{
+  "data": {
+    "latestStats": {
+      "cpu_load": 12.5,
+      "ram_load": 48.7,
+      "ram_used_bytes": 8036286464,
+      "ram_total_bytes": 17179869184
+    },
+    "timeStatsList": [
+      {
+        "timestamp_ms": 1700000000000,
+        "systemStats": {
+          "cpu_load": 11.8,
+          "ram_load": 48.5,
+          "ram_used_bytes": 8000000000,
+          "ram_total_bytes": 17179869184
+        }
+      }
+    ]
+  }
+}
 ```
 
 Binary frames and unknown text commands are ignored. WebSocket routing happens
