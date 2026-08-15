@@ -15,6 +15,7 @@ pub fn view(
   status: ServerStatus,
   terminal_lines: List(String),
   connection_count: Int,
+  connected_count: Int,
   max_connections: Int,
   remove_connection: msg,
   add_connection: msg,
@@ -164,6 +165,7 @@ pub fn view(
           ),
           connection_controls(
             connection_count,
+            connected_count,
             max_connections,
             remove_connection,
             add_connection,
@@ -178,6 +180,7 @@ pub fn view(
 
 fn connection_controls(
   count: Int,
+  connected_count: Int,
   max_connections: Int,
   remove_connection: msg,
   add_connection: msg,
@@ -204,10 +207,12 @@ fn connection_controls(
       div([attribute.class("text-center font-mono")], [
         input([
           attribute.class(
-            "w-16 bg-transparent text-center text-lg font-black outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+            "w-16 rounded-md bg-transparent text-center text-lg font-black tabular-nums [appearance:textfield] focus-visible:ring-2 focus-visible:ring-gleam-ink focus-visible:ring-offset-2 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
           ),
           attribute.type_("number"),
           attribute.inputmode("numeric"),
+          attribute.name("connection-count"),
+          attribute.autocomplete("off"),
           attribute.min("1"),
           attribute.max(int.to_string(max_connections)),
           attribute.value(int.to_string(count)),
@@ -221,6 +226,28 @@ fn connection_controls(
             ),
           ],
           [text("connections")],
+        ),
+        p(
+          [
+            attribute.class(
+              "border-gleam-ink/20 mt-1.5 inline-flex items-center gap-1.5 rounded-full border bg-white px-2 py-0.5 text-[0.65rem] font-bold tracking-wide text-gleam-ink shadow-sm tabular-nums",
+            ),
+            attribute.attribute("role", "status"),
+            attribute.attribute("aria-live", "polite"),
+            attribute.attribute("aria-atomic", "true"),
+          ],
+          [
+            span(
+              [
+                attribute.class(
+                  "size-1.5 rounded-full bg-gleam-cyan ring-1 ring-gleam-ink/30",
+                ),
+                attribute.attribute("aria-hidden", "true"),
+              ],
+              [],
+            ),
+            text(int.to_string(connected_count) <> " connected"),
+          ],
         ),
       ]),
       button(

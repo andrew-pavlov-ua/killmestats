@@ -1,3 +1,5 @@
+import log
+import cache
 import gleam/http/request
 import gleam/http/response.{type Response}
 import gleam/json
@@ -13,12 +15,15 @@ pub fn handle(
   req: request.Request(mist.Connection),
   http_handler: fn(request.Request(mist.Connection)) ->
     Response(mist.ResponseData),
+  context: cache.Context,
 ) -> Response(mist.ResponseData) {
   case request.path_segments(req) {
     ["api", "ws"] ->
       mist.websocket(
         request: req,
-        handler: handle_message,
+        handler: fn(state, message, connection) {
+          handle_message(state, message, connection, context)
+        },
         on_init: fn(_connection) { #(Nil, None) },
         on_close: fn(_state) { Nil },
       )
@@ -31,9 +36,10 @@ fn handle_message(
   state: Nil,
   message: mist.WebsocketMessage(Nil),
   connection: mist.WebsocketConnection,
+  context: cache.Context,
 ) -> mist.Next(Nil, Nil) {
   case message {
-    mist.Text("stats") -> send_stats(connection, state)
+    mist.Text("stats") -> handle_stats(connection, state, context)
     mist.Text(_) -> mist.continue(state)
 
     mist.Binary(_) ->
@@ -45,12 +51,35 @@ fn handle_message(
   }
 }
 
+fn handle_stats(
+  connection: mist.WebsocketConnection,
+  state: Nil,
+  context: cache.Context,
+) -> mist.Next(Nil, Nil) {
+  let stats = stats.get_system_stats()
+
+  case cache.cache_system_stats(context, stats) {
+    Ok(_) -> Nil
+    Error(_) -> {
+      log.error("handle_stats: error caching stats: EtsError")
+      Nil
+    }
+  }
+
+  cache.read_whole_cache(context)
+
+  // TODO
+
+  send_stats(connection, state, stats)
+}
+
 fn send_stats(
   connection: mist.WebsocketConnection,
   state: Nil,
+  stats: sysstats.SystemStats,
 ) -> mist.Next(Nil, Nil) {
   let payload =
-    stats.get_system_stats()
+    stats
     |> sysstats.to_json
     |> json.to_string
 

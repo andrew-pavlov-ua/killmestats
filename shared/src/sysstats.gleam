@@ -32,3 +32,9 @@ pub fn to_json(stats: SystemStats) -> Json {
     #("ram_total_bytes", json.int(stats.ram_total_bytes)),
   ])
 }
+
+pub fn print(stats: SystemStats) -> String {
+  stats
+  |> to_json
+  |> json.to_string
+}
