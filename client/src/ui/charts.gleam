@@ -28,6 +28,7 @@ pub fn render(
 }
 
 pub fn values(samples: List(a), select: fn(a) -> Float, latest: Float) {
+  // The live sample has no cache timestamp yet, so it becomes the final “now” point.
   samples
   |> list.map(select)
   |> list.append([latest])

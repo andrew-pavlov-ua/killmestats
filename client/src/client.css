@@ -21,6 +21,7 @@
   body {
     min-width: 320px;
     min-height: 100vh;
+    line-height: 1.5;
     color: var(--color-gleam-ink);
     background:
       radial-gradient(circle at 10% 10%, rgb(255 175 243 / 25%), transparent 24rem),
@@ -31,9 +32,27 @@
   button {
     font: inherit;
     cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgb(47 41 51 / 15%);
+  }
+
+  :where(button, input, a):focus-visible {
+    outline: 2px solid var(--color-gleam-ink);
+    outline-offset: 3px;
   }
 
   button:disabled {
     cursor: not-allowed;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

@@ -12,6 +12,7 @@ pub fn get_stats() -> Response {
   |> wisp.json_body(body)
 }
 
+// These functions read host metrics through OTP's os_mon application.
 @external(erlang, "stats", "cpu_load")
 fn cpu_load() -> Float
 

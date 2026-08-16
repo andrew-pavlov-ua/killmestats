@@ -12,14 +12,18 @@ const timeFormatter = new Intl.DateTimeFormat(undefined, {
   hour: "2-digit",
   minute: "2-digit",
 });
+const relativeTimeFormatter = new Intl.RelativeTimeFormat(undefined, {
+  numeric: "auto",
+});
 
 function labelsFor(pointCount, timestamps) {
   const labels = timestamps.map((timestamp) =>
     timeFormatter.format(new Date(timestamp)),
   );
 
+  // Cached points have timestamps; the appended live sample is labeled “now”.
   while (labels.length < pointCount) {
-    labels.push("Now");
+    labels.push(relativeTimeFormatter.format(0, "second"));
   }
 
   return labels;
@@ -46,6 +50,7 @@ export function renderChart(id, cpuHistory, ramHistory, timestamps) {
     const labels = labelsFor(pointCount, timestampValues);
     const existing = Chart.getChart(canvas);
 
+    // Reuse the canvas instance so one-second updates do not leak Chart objects.
     if (existing) {
       existing.data.labels = labels;
       existing.data.datasets[0].data = cpuValues;

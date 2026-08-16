@@ -17,6 +17,8 @@ function interface in `server/src/system_stats/stats.erl`.
 
 - Gleam
 - Erlang/OTP with the `os_mon` application
+- Docker with Docker Compose for the production server
+- Nginx for serving the production client
 
 The Lustre development command downloads and manages its frontend tooling when
 needed.
@@ -49,39 +51,11 @@ to `Alive`.
 
 ## Client configuration
 
-Browser code cannot read operating-system environment variables directly. The
-client therefore loads `/config.js` before its compiled JavaScript bundle and
-reads `globalThis.__KILLMESTATS_CONFIG__` through a small JavaScript foreign
-function interface.
-
-The configuration source depends on how the application is run:
-
-- Local development uses `client/assets/config.js`. Lustre copies this file to
-  `client/dist/config.js` when starting or building the client. Edit the asset,
-  not the generated file.
-- Docker production uses `client/config.js.template`. At container startup,
-  Nginx substitutes `API_HOST` and `MAX_CONNECTIONS` from the container
-  environment and writes the resulting `config.js` into its web root.
-
-`API_HOST` is the HTTP origin used for API requests. Leave it empty to use
-`http://localhost:8000` with the local Lustre server or same-origin `/api`
-requests behind Nginx. `MAX_CONNECTIONS` is the application-level ceiling for
-the WebSocket connection control. Invalid or missing values use the fallback
-defined in `client/src/ffi/config_ffi.mjs`.
-
-For Docker, copy `.example.env` to `.env` and adjust the values before starting
-the services:
-
-```env
-API_HOST=
-MAX_CONNECTIONS=100
-```
-
-Then recreate the web container after changing runtime configuration:
-
-```sh
-docker compose up -d --force-recreate web
-```
+Local development connects directly to `http://localhost:8000`. The production
+client uses same-origin `/api` requests, which host Nginx proxies to the server
+on `127.0.0.1:8000`. The default WebSocket connection limit is 1000. These
+defaults are defined in `client/src/config.gleam`; no production `.env`
+file is required for the client.
 
 The application limit does not override limits imposed by the browser or
 operating system. Firefox currently defaults to 200 concurrent WebSocket
@@ -168,15 +142,41 @@ gleam test
 The current development configuration expects the client at
 `http://localhost:1234` and the API at `http://localhost:8000`.
 
-## Docker and Nginx
+## Production deployment
 
-Run the complete application with:
+The server runs in Docker. Build and start it from the repository root:
 
 ```sh
-docker compose up --build
+docker compose up -d --build server
 ```
 
-Open `http://localhost:8080`. Nginx serves the compiled client and proxies the
-entire `/api/` namespace to the Gleam server. The same proxy rule handles normal
-HTTP and WebSocket upgrades, so new API routes do not require separate Nginx
-locations.
+Build the client and copy its static files to `/var/www/html`:
+
+```sh
+make client-deploy
+```
+
+Install the project Nginx configuration the first time, or whenever
+`client/nginx.conf` changes:
+
+```sh
+make nginx-install
+```
+
+`nginx-install` replaces the Debian/Ubuntu default site, checks the
+configuration, and reloads Nginx. Nginx serves `/var/www/html` and proxies the
+entire `/api/` namespace to `127.0.0.1:8000`. The same location supports normal
+HTTP requests and WebSocket upgrades.
+
+Open the host running Nginx in a browser. Port 8080 is no longer used by the
+frontend.
+
+For later updates, rebuild only the part that changed:
+
+```sh
+# Backend
+docker compose up -d --build server
+
+# Frontend
+make client-deploy
+```

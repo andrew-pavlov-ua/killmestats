@@ -3,6 +3,7 @@ import format/bytes
 import gleam/float
 import gleam/int
 import gleam/list
+import gleam/result
 import gleam/string
 import lustre/attribute
 import lustre/element.{type Element, text}
@@ -13,6 +14,8 @@ import ui/charts
 
 pub fn view(
   stats: SystemStats,
+  cpu_history: List(Float),
+  ram_history: List(Float),
   status: ServerStatus,
   terminal_lines: List(String),
   connection_count: Int,
@@ -28,11 +31,9 @@ pub fn view(
       stats.cpu_load
         |> float.round
         |> int.to_string,
-      // bytes.compact_gibibytes(stats.ram_used_bytes, False)
       bytes.human_readable(stats.ram_used_bytes, False)
         <> "/"
         <> bytes.compact_gibibytes(stats.ram_total_bytes, True)
-        // <> bytes.human_readable(stats.ram_total_bytes, True)
         <> " GB",
     )
 
@@ -44,6 +45,7 @@ pub fn view(
       attribute.class(
         "mx-auto grid max-w-6xl gap-12 px-6 py-16 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:px-10 lg:py-24",
       ),
+      attribute.id("main-content"),
     ],
     [
       div([], [
@@ -58,7 +60,7 @@ pub fn view(
         h1(
           [
             attribute.class(
-              "max-w-xl text-5xl font-black leading-[0.98] tracking-[-0.055em] sm:text-6xl lg:text-7xl",
+              "max-w-xl text-balance text-5xl font-black leading-[0.98] tracking-[-0.055em] sm:text-6xl lg:text-7xl",
             ),
           ],
           [
@@ -88,11 +90,11 @@ pub fn view(
         button(
           [
             attribute.class(
-              "bg-gleam-yellow border-gleam-ink shadow-gleam mt-9 rounded-xl border-2 px-6 py-3.5 font-mono text-sm font-black uppercase tracking-wider transition-transform hover:-translate-y-0.5 active:translate-x-1 active:translate-y-1 active:shadow-none",
+              "bg-gleam-yellow border-gleam-ink shadow-gleam mt-9 rounded-xl border-2 px-6 py-3.5 font-mono text-sm font-black uppercase tracking-wider transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gleam-ink focus-visible:ring-offset-4 active:translate-x-1 active:translate-y-1 active:shadow-none",
             ),
             event.on_click(panic_clicked),
           ],
-          [text("Probe the system →")],
+          [text("Probe the System →")],
         ),
       ]),
       div(
@@ -161,6 +163,8 @@ pub fn view(
               attribute.class(
                 "mt-6 font-mono text-xs font-semibold leading-relaxed opacity-60",
               ),
+              attribute.attribute("role", "status"),
+              attribute.attribute("aria-live", "polite"),
             ],
             [text(status_detail(status))],
           ),
@@ -184,61 +188,69 @@ pub fn view(
         [
           div(
             [
-              attribute.class(
-                "border-gleam-ink/20 flex flex-col gap-4 border-b pb-5 sm:flex-row sm:items-end sm:justify-between",
-              ),
+              attribute.class("border-gleam-ink/20 border-b pb-5"),
             ],
             [
-              div([], [
-                p(
-                  [
-                    attribute.class(
-                      "font-mono text-xs font-bold uppercase tracking-[0.2em] opacity-60",
-                    ),
-                  ],
-                  [text("/// telemetry")],
-                ),
-                h2(
-                  [
-                    attribute.id("system-history-heading"),
-                    attribute.class(
-                      "mt-2 text-3xl font-black tracking-[-0.04em] text-balance",
-                    ),
-                  ],
-                  [text("System History")],
-                ),
-                p(
-                  [
-                    attribute.class(
-                      "mt-2 max-w-2xl font-medium leading-relaxed opacity-70 text-pretty",
-                    ),
-                  ],
-                  [
-                    text(
-                      "Watch CPU and memory change as the supervisor keeps the system running.",
-                    ),
-                  ],
-                ),
-              ]),
               div(
                 [
                   attribute.class(
-                    "border-gleam-ink/30 bg-gleam-cyan/80 inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 font-mono text-xs font-black uppercase tracking-widest shadow-sm",
+                    "flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between",
                   ),
                 ],
                 [
-                  span(
+                  div([], [
+                    p(
+                      [
+                        attribute.class(
+                          "font-mono text-xs font-bold uppercase tracking-[0.2em] opacity-60",
+                        ),
+                      ],
+                      [text("/// telemetry")],
+                    ),
+                    h2(
+                      [
+                        attribute.id("system-history-heading"),
+                        attribute.class(
+                          "mt-2 text-3xl font-black tracking-[-0.04em] text-balance",
+                        ),
+                      ],
+                      [text("System History")],
+                    ),
+                    p(
+                      [
+                        attribute.class(
+                          "mt-2 max-w-2xl font-medium leading-relaxed opacity-70 text-pretty",
+                        ),
+                      ],
+                      [
+                        text(
+                          "Watch CPU and memory change as the supervisor keeps the system running.",
+                        ),
+                      ],
+                    ),
+                  ]),
+                  div(
                     [
                       attribute.class(
-                        "border-gleam-ink/40 size-2 rounded-full border bg-white",
+                        "border-gleam-ink/30 bg-gleam-cyan/80 inline-flex w-fit shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 font-mono text-xs font-black uppercase tracking-widest shadow-sm",
                       ),
-                      attribute.attribute("aria-hidden", "true"),
                     ],
-                    [],
+                    [
+                      span(
+                        [
+                          attribute.class(
+                            "border-gleam-ink/40 size-2 rounded-full border bg-white",
+                          ),
+                          attribute.attribute("aria-hidden", "true"),
+                        ],
+                        [],
+                      ),
+                      text("Live Data"),
+                    ],
                   ),
-                  text("Live Data"),
                 ],
               ),
+              history_summary(cpu_history, ram_history),
             ],
           ),
           div(
@@ -295,7 +307,7 @@ fn connection_controls(
       button(
         [
           attribute.class(
-            "border-gleam-ink grid size-9 place-items-center rounded-lg border-2 bg-white font-mono text-xl font-black disabled:cursor-not-allowed disabled:opacity-30",
+            "border-gleam-ink grid size-10 place-items-center rounded-lg border-2 bg-white font-mono text-xl font-black transition-[transform,background-color] hover:bg-gleam-yellow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gleam-ink focus-visible:ring-offset-2 active:scale-95 disabled:cursor-not-allowed disabled:opacity-30",
           ),
           attribute.disabled(count <= 1),
           attribute.attribute("aria-label", "Remove WebSocket connection"),
@@ -352,7 +364,7 @@ fn connection_controls(
       button(
         [
           attribute.class(
-            "border-gleam-ink bg-gleam-cyan grid size-9 place-items-center rounded-lg border-2 font-mono text-xl font-black disabled:cursor-not-allowed disabled:opacity-30",
+            "border-gleam-ink bg-gleam-cyan grid size-10 place-items-center rounded-lg border-2 font-mono text-xl font-black transition-[transform,background-color] hover:bg-gleam-yellow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gleam-ink focus-visible:ring-offset-2 active:scale-95 disabled:cursor-not-allowed disabled:opacity-30",
           ),
           attribute.disabled(count >= max_connections),
           attribute.attribute("aria-label", "Add WebSocket connection"),
@@ -367,7 +379,7 @@ fn connection_controls(
 fn terminal(lines: List(String)) {
   let output = case lines {
     [] -> [
-      p([attribute.class("opacity-50")], [text("$ waiting for input...")]),
+      p([attribute.class("opacity-50")], [text("$ waiting for input…")]),
     ]
     lines -> list.map(lines, terminal_line)
   }
@@ -389,7 +401,13 @@ fn terminal(lines: List(String)) {
           p([attribute.class("font-mono text-xs font-bold")], [
             text("server terminal"),
           ]),
-          span([attribute.class("size-2 rounded-full bg-gleam-cyan")], []),
+          span(
+            [
+              attribute.class("size-2 rounded-full bg-gleam-cyan"),
+              attribute.attribute("aria-hidden", "true"),
+            ],
+            [],
+          ),
         ],
       ),
       div(
@@ -465,4 +483,68 @@ fn stat_card(
       ),
     ],
   )
+}
+
+fn history_summary(cpu_history: List(Float), ram_history: List(Float)) {
+  div(
+    [
+      attribute.class("mt-5 grid gap-3 font-mono text-xs sm:grid-cols-2"),
+      attribute.attribute("aria-label", "System history summary"),
+    ],
+    [
+      history_metric("CPU", cpu_history, "bg-gleam-pink"),
+      history_metric("RAM", ram_history, "bg-gleam-cyan"),
+    ],
+  )
+}
+
+fn history_metric(label: String, values: List(Float), accent: String) {
+  let #(current, average, peak) = case values {
+    [] -> #("--", "--", "--")
+    [first, ..rest] -> {
+      let #(sum, maximum, count) =
+        list.fold(rest, #(first, first, 1), fn(summary, value) {
+          let #(sum, maximum, count) = summary
+          #(sum +. value, float.max(maximum, value), count + 1)
+        })
+      let current = list.last(values) |> result.unwrap(first)
+      #(percent(current), percent(sum /. int.to_float(count)), percent(maximum))
+    }
+  }
+
+  div(
+    [
+      attribute.class(
+        "border-gleam-ink/20 min-w-0 rounded-xl border bg-white/70 px-4 py-3",
+      ),
+    ],
+    [
+      div([attribute.class("mb-2 flex items-center gap-2 font-black")], [
+        span(
+          [
+            attribute.class(accent <> " size-2 rounded-full"),
+            attribute.attribute("aria-hidden", "true"),
+          ],
+          [],
+        ),
+        text(label),
+      ]),
+      div([attribute.class("grid grid-cols-3 gap-2 tabular-nums")], [
+        summary_value("Current", current),
+        summary_value("Average", average),
+        summary_value("Peak", peak),
+      ]),
+    ],
+  )
+}
+
+fn summary_value(label: String, value: String) {
+  div([], [
+    p([attribute.class("text-base font-black leading-none")], [text(value)]),
+    p([attribute.class("mt-0.5 opacity-55")], [text(label)]),
+  ])
+}
+
+fn percent(value: Float) -> String {
+  value |> float.round |> int.to_string |> fn(value) { value <> "%" }
 }

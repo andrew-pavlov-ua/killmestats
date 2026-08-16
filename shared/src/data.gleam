@@ -4,6 +4,8 @@ import gleam/json.{type Json}
 import sysstats
 
 pub type Data {
+  // The latest sample is shown in the CPU and RAM cards.
+  // Timestamped samples are used for the history chart.
   Data(latest_stats: sysstats.SystemStats, time_stats_list: List(TimeStats))
 }
 

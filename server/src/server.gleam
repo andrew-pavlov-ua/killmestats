@@ -16,12 +16,12 @@ pub fn main() -> Nil {
 
   let http_handler = wisp_mist.handler(router.handle_request, secret_key_base)
 
+  // WebSocket upgrades need Mist's connection value before Wisp consumes the request.
   let handler = fn(request) { websocket.handle(request, http_handler, context) }
 
   let assert Ok(_) =
     handler
     |> mist.new
-    // |> mist.bind("0.0.0.0")
     |> mist.bind("::")
     |> mist.port(8000)
     |> mist.start

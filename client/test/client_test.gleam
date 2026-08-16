@@ -1,6 +1,8 @@
 import app/extra_websocket
 import app/state
 import app/update
+import config
+import format/bytes
 import gleam/int
 import gleam/list
 import gleam/option.{None}
@@ -14,6 +16,14 @@ pub fn main() -> Nil {
 
 pub fn chart_values_append_latest_sample_test() {
   assert charts.values([1, 2], int.to_float, 3.0) == [1.0, 2.0, 3.0]
+}
+
+pub fn kibibytes_use_the_correct_suffix_test() {
+  assert bytes.human_readable(1024, True) == "1.0KiB"
+}
+
+pub fn default_connection_limit_test() {
+  assert config.max_socket_connections() == 1000
 }
 
 pub fn add_connection_prepends_new_connection_test() {
@@ -101,6 +111,8 @@ fn base_model() -> state.Model {
       ram_used_bytes: 0,
       ram_total_bytes: 0,
     ),
+    cpu_history: [],
+    ram_history: [],
     server_status: state.Checking,
     terminal_lines: [],
     connection_timed_out: False,

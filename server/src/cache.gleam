@@ -6,6 +6,9 @@ import gleam/dynamic
 import gleam/dynamic/decode
 import gleam/int
 import gleam/list
+import gleam/order
+import gleam/result
+import gleam/time/duration
 import gleam/time/timestamp.{type Timestamp}
 import log
 import sysstats
@@ -32,6 +35,7 @@ pub fn handle_cache(
   let now = timestamp.system_time()
   let #(unix_seconds, _) = timestamp.to_unix_seconds_and_nanoseconds(now)
 
+  // One key per minute bounds history growth even though clients poll every second.
   let minute_seconds = unix_seconds / 60 * 60
   let minute = timestamp.from_unix_seconds(minute_seconds)
 
@@ -70,19 +74,41 @@ fn stats_encoder(stats: sysstats.SystemStats) -> dynamic.Dynamic {
     #(dynamic.string("ram_load"), dynamic.float(stats.ram_load)),
     #(dynamic.string("ram_used_bytes"), dynamic.int(stats.ram_used_bytes)),
     #(dynamic.string("ram_total_bytes"), dynamic.int(stats.ram_total_bytes)),
-    // add more stats
   ])
 }
 
+fn entry_expiration() -> duration.Duration {
+  duration.hours(24)
+}
+
 pub fn read_whole_cache(context: Context) -> List(data.TimeStats) {
+  let now = timestamp.system_time()
+  let expiration = entry_expiration()
+
   operations.to_list(context.cache)
-  |> list.map(fn(pair) {
+  |> list.filter_map(fn(pair) {
     let #(key, value) = pair
-    let #(seconds, nanoseconds) = timestamp.to_unix_seconds_and_nanoseconds(key)
+    // `difference(left, right)` calculates right - left.
+    let age = timestamp.difference(key, now)
 
-    let timestamp_ms = seconds * 1000 + nanoseconds / 1_000_000
+    case duration.compare(age, expiration) {
+      order.Gt -> {
+        // `to_list` is a snapshot, so filter the deleted entry from this result too.
+        operations.delete(context.cache, key)
+        |> result.unwrap(Nil)
 
-    data.TimeStats(timestamp_ms:, stats: value)
+        Error(Nil)
+      }
+
+      _ -> {
+        let #(seconds, nanoseconds) =
+          timestamp.to_unix_seconds_and_nanoseconds(key)
+
+        let timestamp_ms = seconds * 1000 + nanoseconds / 1_000_000
+
+        Ok(data.TimeStats(timestamp_ms:, stats: value))
+      }
+    }
   })
   |> list.sort(by: fn(stat1, stat2) {
     int.compare(stat1.timestamp_ms, stat2.timestamp_ms)

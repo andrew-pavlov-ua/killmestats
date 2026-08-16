@@ -38,7 +38,13 @@ fn status_indicator(status: ServerStatus) -> Element(msg) {
       attribute.attribute("aria-live", "polite"),
     ],
     [
-      span([attribute.class(status_dot_class(status))], []),
+      span(
+        [
+          attribute.class(status_dot_class(status)),
+          attribute.attribute("aria-hidden", "true"),
+        ],
+        [],
+      ),
       text(status_label(status)),
     ],
   )

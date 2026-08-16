@@ -10,7 +10,6 @@ pub fn post(path: String) -> Promise(Result(Nil, ApiError)) {
   use req <- with_json_request(path)
 
   req
-  // |> request.set_method(Get, Post)
   |> request.set_method(Post)
   |> fetch.send
   |> promise.map(result.map_error(_, FetchError))
@@ -21,6 +20,7 @@ fn with_json_request(
   path: String,
   callback: fn(Request(String)) -> Promise(Result(a, ApiError)),
 ) -> Promise(Result(a, ApiError)) {
+  // Keeping URL construction here gives every request the same runtime host rules.
   let url = config.api_base_url() <> path
 
   request.to(url)

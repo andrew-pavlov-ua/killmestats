@@ -10,16 +10,15 @@ pub type Model {
   Model(
     page: Page,
     stats: sysstats.SystemStats,
+    // History includes the latest live sample appended to the cached samples.
+    cpu_history: List(Float),
+    ram_history: List(Float),
     server_status: ServerStatus,
     terminal_lines: List(String),
     connection_timed_out: Bool,
-    // The main websocket which transports data
     socket: Option(websocket.WebSocket),
-    // Identifies the current primary connection attempt so stale events are ignored.
     primary_connection_id: Int,
-    // List of WebSockets
     connections: List(Connection),
-    // The next ws id to omit id's confusion
     next_connection_id: Int,
   )
 }

@@ -33,6 +33,7 @@ pub fn update(
     state.ExtraSocketEvent(id, event) ->
       su.update_extra_socket(model, id, event)
     state.ExtraTick(id) -> su.poll_extra_socket(model, id)
+    // Events from an earlier connection attempt must not replace the active socket.
     state.SocketEvent(id, event) if id != model.primary_connection_id ->
       case event {
         websocket.OnOpen(socket) -> #(model, websocket.close(socket))
@@ -81,6 +82,8 @@ pub fn update(
             state.Model(
               ..model,
               stats: data.latest_stats,
+              cpu_history: cpu_history,
+              ram_history: ram_history,
               server_status: state.Alive,
             ),
             effect.batch([
@@ -183,6 +186,7 @@ fn schedule_reconnect(id: Int) -> Effect(state.Msg) {
 
 fn panic_server() -> Effect(state.Msg) {
   effect.from(fn(_dispatch) {
+    // The socket lifecycle reports recovery; this request has no client state to return.
     api_client.post("/api/panic")
     Nil
   })

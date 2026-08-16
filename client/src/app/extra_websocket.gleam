@@ -12,7 +12,6 @@ const poll_interval_ms = 1000
 
 const connection_timeout_ms = 4000
 
-// Separate funcs for testability
 pub fn set_connection_count(model: state.Model, value: String) {
   set_connection_count_at(model, value, websocket_url())
 }
@@ -34,6 +33,7 @@ pub fn resize_connections(
   effects: List(Effect(state.Msg)),
   url: String,
 ) {
+  // The primary stats socket is always present in the number shown to the user.
   let current = list.length(model.connections) + 1
 
   case current == target, current < target {
@@ -101,6 +101,7 @@ pub fn update_extra_socket(
         })
 
       case is_expected {
+        // A removed connection can still finish opening after its close was requested.
         False -> #(model, websocket.close(socket))
         True -> {
           let connections =
@@ -182,6 +183,7 @@ fn schedule_extra_fetch(id: Int) -> Effect(state.Msg) {
 }
 
 pub fn websocket_url() -> String {
+  // Lustre's dev server and the API run on separate ports during local development.
   case websocket.page_uri() {
     Ok(uri) if uri.port == Some(1234) ->
       Uri(

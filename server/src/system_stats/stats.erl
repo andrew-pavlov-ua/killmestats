@@ -15,6 +15,7 @@ memory_stats() ->
     ensure_os_mon_started(),
     MemData = memsup:get_system_memory_data(),
 
+    %% Available memory keeps filesystem cache from being reported as pressure.
     Total = proplists:get_value(total_memory, MemData, 1),
     Available = proplists:get_value(available_memory, MemData, 1),
     Used = max(Total - Available, 0),

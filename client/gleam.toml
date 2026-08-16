@@ -29,12 +29,12 @@ lustre_dev_tools = ">= 2.3.6 and < 3.0.0"
 [tools.lustre.html]
 title = "killmestats"
 meta = [
-  { name = "description", content = "A live Gleam, Erlang, and OTP resilience experiment." }
+  { name = "description", content = "A live Gleam, Erlang, and OTP resilience experiment." },
+  { name = "theme-color", content = "#fffbe8" }
 ]
 links = [
   { rel = "icon", type = "image/svg+xml", href = "/favicon.svg" }
 ]
 scripts = [
-  { src = "/config.js" },
   { src = "/chart.umd.min.js" }
 ]

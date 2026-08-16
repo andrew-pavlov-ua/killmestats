@@ -3,36 +3,32 @@ import gleam/int
 
 const kibibyte = 1024
 
-// KiB
 const mebibyte = 1_048_576
 
-// MiB
 const gibibyte = 1_073_741_824
 
-// GiB
-
-pub fn human_readable(bytes: Int, add_suddix: Bool) -> String {
+pub fn human_readable(bytes: Int, add_suffix: Bool) -> String {
   case bytes {
     bytes if bytes >= gibibyte ->
-      case add_suddix {
+      case add_suffix {
         True -> format(bytes, gibibyte, "GiB")
         False -> format(bytes, gibibyte, "")
       }
 
     bytes if bytes >= mebibyte ->
-      case add_suddix {
+      case add_suffix {
         True -> format(bytes, mebibyte, "MiB")
         False -> format(bytes, mebibyte, "")
       }
     bytes if bytes >= kibibyte ->
-      case add_suddix {
-        True -> format(bytes, kibibyte, "MiB")
+      case add_suffix {
+        True -> format(bytes, kibibyte, "KiB")
         False -> format(bytes, kibibyte, "")
       }
 
     bytes ->
       int.to_string(bytes)
-      <> case add_suddix {
+      <> case add_suffix {
         True -> " B"
         False -> ""
       }
@@ -41,6 +37,7 @@ pub fn human_readable(bytes: Int, add_suddix: Bool) -> String {
 
 pub fn compact_gibibytes(bytes: Int, round_up: Bool) -> String {
   let value = int.to_float(bytes) /. int.to_float(gibibyte)
+  // Capacity is rounded up so the compact total never understates installed RAM.
   let rounded = case round_up {
     True -> value |> float.ceiling |> float.truncate |> int.to_string
     False -> value |> float.round |> int.to_string
