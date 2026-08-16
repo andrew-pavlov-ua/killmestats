@@ -22,6 +22,8 @@ const connection_timeout_ms = 4000
 
 const panic_log = "EROR function=\"panic_program\" message=\"`panic` expression evaluated.\" module=\"router\" file=\"src/router.gleam\" gleam_error=Panic class=Errored"
 
+const unreachable_log = "ERROR Server is unreachable. Probe skipped."
+
 pub fn update(
   model: state.Model,
   msg: state.Msg,
@@ -135,10 +137,24 @@ pub fn update(
         Some(_) -> #(model, effect.none())
       }
     }
-    state.UserClickedPanic -> #(
-      state.Model(..model, terminal_lines: [panic_log, ..model.terminal_lines]),
-      panic_server(),
-    )
+    state.UserClickedPanic ->
+      case model.server_status {
+        state.Alive -> #(
+          state.Model(..model, terminal_lines: [
+            panic_log,
+            ..model.terminal_lines
+          ]),
+          panic_server(),
+        )
+        state.ServerUnreachable(_) -> #(
+          state.Model(..model, terminal_lines: [
+            unreachable_log,
+            ..model.terminal_lines
+          ]),
+          effect.none(),
+        )
+        state.Checking -> #(model, effect.none())
+      }
 
     state.SocketEvent(_, websocket.OnBinaryMessage(_)) -> #(
       model,

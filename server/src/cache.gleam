@@ -36,7 +36,7 @@ pub fn handle_cache(
   let #(unix_seconds, _) = timestamp.to_unix_seconds_and_nanoseconds(now)
 
   // One key per minute bounds history growth even though clients poll every second.
-  let minute_seconds = unix_seconds / 60 * 60
+  let minute_seconds = unix_seconds / 60 / 15 * 60 * 15
   let minute = timestamp.from_unix_seconds(minute_seconds)
 
   case operations.insert_new(context.cache, minute, stats) {

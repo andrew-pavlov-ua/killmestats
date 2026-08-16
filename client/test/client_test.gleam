@@ -91,6 +91,22 @@ pub fn current_primary_timeout_advances_attempt_test() {
     == state.ServerUnreachable("WebSocket connection timed out")
 }
 
+pub fn panic_click_reports_when_server_is_unreachable_test() {
+  let model =
+    state.Model(
+      ..base_model(),
+      server_status: state.ServerUnreachable("WebSocket disconnected"),
+      terminal_lines: ["existing output"],
+    )
+  let #(updated, _) = update.update(model, state.UserClickedPanic)
+
+  assert updated.terminal_lines
+    == [
+      "ERROR Server is unreachable. Probe skipped.",
+      "existing output",
+    ]
+}
+
 fn model_with_connections(
   connections: List(state.Connection),
   next_connection_id: Int,

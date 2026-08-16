@@ -279,7 +279,7 @@ pub fn view(
                     "relative z-10 flex min-h-96 min-w-0 items-center px-3 py-4 sm:px-6 sm:py-5",
                   ),
                 ],
-                [charts.view()],
+                [history_chart(status)],
               ),
             ],
           ),
@@ -287,6 +287,14 @@ pub fn view(
       ),
     ],
   )
+}
+
+fn history_chart(status: ServerStatus) -> Element(msg) {
+  case status {
+    state.Checking -> charts.checking_view()
+    state.ServerUnreachable(detail) -> charts.unreachable_view(detail)
+    state.Alive -> charts.view()
+  }
 }
 
 fn connection_controls(
