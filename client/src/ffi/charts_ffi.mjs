@@ -158,7 +158,7 @@ export function renderChart(id, cpuHistory, ramHistory, timestamps) {
                 family: '"SFMono-Regular", Consolas, "Liberation Mono", monospace',
                 size: 11,
               },
-              maxTicksLimit: 8,
+              // maxTicksLimit: 8,
             },
           },
           y: {

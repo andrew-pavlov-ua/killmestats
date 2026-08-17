@@ -8,3 +8,4 @@ info.md
 .lustre/
 .env
 client/dist
+websocket-stats-design.md
