@@ -1,14 +1,18 @@
 # Gleam System Stats
 
 A small full-stack Gleam application that displays the host machine's current
-CPU and RAM utilization. The backend runs on Erlang/OTP with Wisp and Mist; the
-browser client is built with Lustre.
+CPU and RAM utilization together with a 24-hour history chart. The backend runs
+on Erlang/OTP with Wisp and Mist; the browser client is built with Lustre and
+renders history with Chart.js.
 
 ## Project layout
 
-- `server/` exposes HTTP endpoints and the system-statistics WebSocket.
-- `client/` receives live statistics and renders them with Lustre.
-- `shared/` contains the `SystemStats` type used by both applications.
+- `server/` exposes HTTP endpoints and the system-statistics WebSocket, samples
+  statistics every interval_seconds() minutes, and stores the latest 24 hours in ETS.
+- `client/` receives live statistics and renders the dashboard with Lustre and
+  Chart.js.
+- `shared/` contains the statistics and WebSocket payload types used by both
+  applications.
 
 The server uses Erlang's `os_mon` application through a small Erlang foreign
 function interface in `server/src/system_stats/stats.erl`.
@@ -113,13 +117,15 @@ upgrade requires Mist's original connection value.
 ### `GET /api/stats`
 
 HTTP fallback for diagnostics and clients that cannot use WebSockets. It
-returns the same CPU and RAM data as percentages in the `0.0` to `100.0`
-range:
+returns CPU and RAM utilization as percentages in the `0.0` to `100.0` range,
+along with used and total RAM in bytes:
 
 ```json
 {
   "cpu_load": 12.5,
-  "ram_load": 48.7
+  "ram_load": 48.7,
+  "ram_used_bytes": 8036286464,
+  "ram_total_bytes": 17179869184
 }
 ```
 
@@ -144,6 +150,9 @@ gleam test
 
 The current development configuration expects the client at
 `http://localhost:1234` and the API at `http://localhost:8000`.
+
+GitHub Actions runs these checks for `shared`, `server`, and `client` on pushes
+to `master` or `main`, and on pull requests.
 
 ## Production deployment
 
@@ -187,3 +196,9 @@ docker compose up -d --build server
 # Frontend
 make client-deploy
 ```
+
+After a successful `test` workflow on `master`, the `deploy` workflow performs
+both commands on a Linux self-hosted runner. The runner host must have Docker,
+Docker Compose, Nginx, and passwordless permission for the `sudo cp` used by
+`make client-deploy`. The workflow targets an Ubuntu 22 compatible Erlang build
+through `ImageOS: ubuntu22`; the host itself may be Debian.

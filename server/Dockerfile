@@ -14,6 +14,9 @@ WORKDIR /app/server
 RUN gleam deps download
 RUN gleam export erlang-shipment
 
+FROM build AS migrate
+CMD ["gleam", "run", "-m", "cigogne", "all"]
+
 FROM erlang:${ERLANG_VERSION}-alpine AS runtime
 RUN addgroup --system webapp \
   && adduser --system --ingroup webapp webapp

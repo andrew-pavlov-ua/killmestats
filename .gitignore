@@ -9,3 +9,5 @@ info.md
 .env
 client/dist
 websocket-stats-design.md
+stats-cache
+.docker

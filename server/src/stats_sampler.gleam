@@ -51,7 +51,7 @@ fn handle_message(
 }
 
 fn schedule_next(data: process.Subject(Message)) -> Nil {
-  // The first call is already aligned; subsequent samples stay 15 minutes apart
+  // The first call is already aligned; subsequent samples stay interval_seconds() minutes apart
   process.send(data, Sample)
   process.sleep(cache.interval_seconds() * 1000)
   schedule_next(data)

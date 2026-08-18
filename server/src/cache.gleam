@@ -14,7 +14,7 @@ import log
 import sysstats
 
 pub fn interval_seconds() -> Int {
-  15 * 60
+  60 * 60
 }
 
 pub type Context {
