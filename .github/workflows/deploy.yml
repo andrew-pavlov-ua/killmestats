@@ -30,6 +30,8 @@ jobs:
           ref: ${{ github.event.workflow_run.head_sha }}
 
       - uses: erlef/setup-beam@v1
+        env:
+          ImageOS: ubuntu22
         with:
           otp-version: "29"
           gleam-version: "1.18.1"
