@@ -24,9 +24,9 @@ jobs:
     env:
       ImageOS: ubuntu22
       Home: /root
-      POSTGRES_USER: ${{ secrets.PG_USER }}
-      POSTGRES_PASSWORD: ${{ secrets.PG_PASSWORD }}
-      POSTGRES_DB: ${{ secrets.PG_DB }}
+      PG_USER: ${{ secrets.PG_USER }}
+      PG_PASSWORD: ${{ secrets.PG_PASSWORD }}
+      PG_DB: ${{ secrets.PG_DB }}
 
     steps:
       - name: Prepare runner home
