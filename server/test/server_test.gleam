@@ -1,6 +1,12 @@
+import cache
+import data
+import dream_ets/operations
 import gleam/http.{Delete, Get, Post}
 import gleam/http/response
 import gleam/json
+import gleam/list
+import gleam/time/duration
+import gleam/time/timestamp
 import gleeunit
 import gleeunit/should
 import router
@@ -75,4 +81,86 @@ pub fn panic_endpoint_is_rescued_as_internal_server_error_test() {
 
   response.status
   |> should.equal(500)
+}
+
+fn sample(cpu_load: Float) -> sysstats.SystemStats {
+  sysstats.SystemStats(
+    cpu_load: cpu_load,
+    ram_load: 50.0,
+    ram_used_bytes: 500,
+    ram_total_bytes: 1000,
+  )
+}
+
+pub fn cache_keeps_first_sample_in_each_interval_test() {
+  let assert Ok(table) = cache.create_cache()
+  let context = cache.Context(table)
+  let now = timestamp.from_unix_seconds(1_800_000_123)
+  let first = sample(12.0)
+  let later = sample(34.0)
+
+  cache.insert_sample_at(context, first, now)
+  |> should.be_ok
+  cache.insert_sample_at(
+    context,
+    later,
+    timestamp.add(now, duration.minutes(5)),
+  )
+  |> should.be_ok
+
+  let assert [data.TimeStats(timestamp_ms:, stats: stored)] =
+    cache.read_whole_cache(context)
+
+  timestamp_ms
+  |> should.equal(1_800_000_000_000)
+  stored
+  |> should.equal(first)
+
+  operations.delete_table(table)
+  |> should.be_ok
+}
+
+pub fn cache_history_is_chronological_test() {
+  let assert Ok(table) = cache.create_cache()
+  let context = cache.Context(table)
+  let earlier = timestamp.from_unix_seconds(1_800_000_000)
+  let later = timestamp.add(earlier, duration.minutes(15))
+
+  operations.set(table, later, sample(20.0))
+  |> should.be_ok
+  operations.set(table, earlier, sample(10.0))
+  |> should.be_ok
+
+  let timestamps =
+    cache.read_whole_cache(context)
+    |> list.map(fn(entry) { entry.timestamp_ms })
+
+  timestamps
+  |> should.equal([1_800_000_000_000, 1_800_000_900_000])
+
+  operations.delete_table(table)
+  |> should.be_ok
+}
+
+pub fn cache_deletes_only_expired_samples_test() {
+  let assert Ok(table) = cache.create_cache()
+  let context = cache.Context(table)
+  let now = timestamp.from_unix_seconds(1_800_000_000)
+  let expired = timestamp.subtract(now, duration.hours(25))
+  let retained = timestamp.subtract(now, duration.hours(23))
+
+  operations.set(table, expired, sample(10.0))
+  |> should.be_ok
+  operations.set(table, retained, sample(20.0))
+  |> should.be_ok
+
+  cache.delete_expired_at(context, now)
+
+  let assert [data.TimeStats(stats: remaining, ..)] =
+    cache.read_whole_cache(context)
+  remaining
+  |> should.equal(sample(20.0))
+
+  operations.delete_table(table)
+  |> should.be_ok
 }

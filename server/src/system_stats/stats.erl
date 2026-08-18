@@ -3,12 +3,34 @@
 -export([cpu_load/0, memory_stats/0]).
 
 cpu_load() ->
-    ensure_os_mon_started(),
+      case application:ensure_all_started(os_mon) of
+          {ok, _Started} ->
+             read_cpu_load();
+             {error, Reason} ->
+            logger:error(
+                 "Failed to start os_mon: ~p",
+              [Reason]
+             ),
+             0.0
+     end.
+
+read_cpu_load() ->
     try cpu_sup:util() of
-        Value when is_number(Value) -> clamp(float(Value));
-        _ -> 0.0
+      Value when is_number(Value) ->
+          clamp(float(Value));
+      Unexpected ->
+          logger:error(
+              "cpu_sup:util() returned unexpected value: ~p",
+              [Unexpected]
+          ),
+          0.0
     catch
-        _Class:_Reason -> 0.0
+      Class:Reason:Stacktrace ->
+          logger:error(
+              "cpu_sup:util() failed; class=~p reason=~p stacktrace=~p",
+              [Class, Reason, Stacktrace]
+          ),
+          0.0
     end.
 
 memory_stats() ->

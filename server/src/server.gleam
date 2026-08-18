@@ -1,3 +1,4 @@
+import stats_sampler
 import cache
 import gleam/erlang/process
 import log
@@ -13,6 +14,8 @@ pub fn main() -> Nil {
 
   let assert Ok(table) = cache.create_cache()
   let context = cache.Context(table)
+
+  stats_sampler.start(context)
 
   let http_handler = wisp_mist.handler(router.handle_request, secret_key_base)
 

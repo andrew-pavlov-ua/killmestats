@@ -154,6 +154,8 @@ export function renderChart(id, cpuHistory, ramHistory, timestamps) {
             ticks: {
               color: ink,
               padding: 8,
+              minRotation: 0,
+              maxRotation: 0,
               font: {
                 family: '"SFMono-Regular", Consolas, "Liberation Mono", monospace',
                 size: 11,

@@ -4,7 +4,6 @@ import gleam/http/request
 import gleam/http/response.{type Response}
 import gleam/json
 import gleam/option.{None}
-import log
 import mist
 
 import system_stats/stats
@@ -39,7 +38,7 @@ fn handle_message(
   context: cache.Context,
 ) -> mist.Next(Nil, Nil) {
   case message {
-    mist.Text("stats") -> handle_stats(connection, state, context)
+    mist.Text("stats") -> send_stats(connection, state, context)
     mist.Text(_) -> mist.continue(state)
 
     mist.Binary(_) ->
@@ -51,27 +50,19 @@ fn handle_message(
   }
 }
 
-fn handle_stats(
+fn send_stats(
   connection: mist.WebsocketConnection,
   state: Nil,
   context: cache.Context,
 ) -> mist.Next(Nil, Nil) {
   let stats = stats.get_system_stats()
 
-  case cache.handle_cache(context, stats) {
-    Ok(data) -> send_stats(connection, state, data)
-    Error(_) -> {
-      log.error("handle_stats: error caching stats: EtsError")
-      mist.continue(state)
-    }
-  }
-}
+  let time_stats_list = cache.read_whole_cache(context)
+  let data = data.Data(
+    latest_stats: stats,
+    time_stats_list: time_stats_list,
+  )
 
-fn send_stats(
-  connection: mist.WebsocketConnection,
-  state: Nil,
-  data: data.Data,
-) -> mist.Next(Nil, Nil) {
   let payload =
     data
     |> data.to_json
