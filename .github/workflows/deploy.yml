@@ -21,6 +21,8 @@ jobs:
       - linux
     environment:
       name: production
+    env:
+      ImageOS: ubuntu22
 
     steps:
       - uses: actions/checkout@v7
