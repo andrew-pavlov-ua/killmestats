@@ -23,17 +23,18 @@ jobs:
       name: production
     env:
       ImageOS: ubuntu22
-      HOME: ${{ runner.temp }}/home
 
     steps:
       - name: Prepare runner home
-        run: mkdir -p "$HOME"
+        run: mkdir -p "$RUNNER_TEMP/home"
 
       - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
       - uses: erlef/setup-beam@v1
+        env:
+          HOME: ${{ runner.temp }}/home
         with:
           otp-version: "29"
           gleam-version: "1.18.1"
