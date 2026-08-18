@@ -11,3 +11,4 @@ client/dist
 websocket-stats-design.md
 stats-cache
 .docker
+postgres-data/

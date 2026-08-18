@@ -24,6 +24,9 @@ jobs:
     env:
       ImageOS: ubuntu22
       Home: /root
+      POSTGRES_USER: ${{ secrets.PG_USER }}
+      POSTGRES_PASSWORD: ${{ secrets.PG_PASSWORD }}
+      POSTGRES_DB: ${{ secrets.PG_DB }}
 
     steps:
       - name: Prepare runner home
@@ -40,6 +43,12 @@ jobs:
           otp-version: "29"
           gleam-version: "1.18.1"
           rebar3-version: "3"
+
+      - name: Check deployment configuration
+        run: |
+          test -n "$PG_USER" || { echo "PG_USER is missing"; exit 1; }
+          test -n "$PG_PASSWORD" || { echo "PG_PASSWORD is missing"; exit 1; }
+          test -n "$PG_DB" || { echo "PG_DB is missing"; exit 1; }
 
       - name: Deploy backend
         run: docker compose -p killmestats up -d --build
