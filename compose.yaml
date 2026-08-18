@@ -1,5 +1,6 @@
 services:
   server:
+    container_name: killmestats
     build:
       context: .
       dockerfile: server/Dockerfile

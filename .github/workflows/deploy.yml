@@ -1,0 +1,40 @@
+name: deploy
+
+on:
+  workflow_run:
+    workflows:
+      - test
+    types:
+      - completed
+    branches:
+      - master
+
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on:
+      - self-hosted
+      - linux
+    environment:
+      name: production
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: "29"
+          gleam-version: "1.18.1"
+          rebar3-version: "3"
+
+      - name: Deploy backend
+        run: docker compose -p killmestats up -d --build server
+
+      - name: Deploy frontend
+        run: make client-deploy

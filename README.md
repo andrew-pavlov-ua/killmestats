@@ -75,8 +75,10 @@ command whenever it wants the current sample:
 stats
 ```
 
-The server replies with the latest reading and one cached sample per minute.
-History is ordered from oldest to newest:
+The server replies with the latest reading and the cached history. A server-side
+sampler records one point at each 15-minute boundary, even when no browser is
+connected. Samples older than 24 hours are removed, and history is ordered from
+oldest to newest:
 
 ```json
 {
@@ -124,10 +126,11 @@ range:
 CPU utilization comes from `cpu_sup`. RAM utilization is calculated from the
 total and available system memory reported by `memsup`.
 
-A reported value of `0.0` can be legitimate for an idle CPU. For RAM it may
-indicate that `os_mon`/`memsup` was unavailable or could not read the operating
-system's memory information; the server writes a warning when either metric is
-zero.
+A reported CPU value of `0.0` can be legitimate when the machine is idle, so it
+does not produce a warning by itself. Failures returned by `os_mon`/`cpu_sup`
+are logged by the Erlang adapter. A RAM value of `0.0` may indicate that
+`os_mon`/`memsup` was unavailable or could not read the operating system's
+memory information, and the server writes a warning for that value.
 
 ## Development checks
 
@@ -150,11 +153,15 @@ The server runs in Docker. Build and start it from the repository root:
 docker compose up -d --build server
 ```
 
-Build the client and copy its static files to `/var/www/html`:
+Build the client and copy the contents of `client/dist` to `/var/www/html`:
 
 ```sh
 make client-deploy
 ```
+
+`client-build` only creates the static files. `client-deploy` runs that build
+and then copies `client/dist/.` with `sudo`, preserving dotfiles and copying the
+directory contents rather than nesting a `dist` directory under the web root.
 
 Install the project Nginx configuration the first time, or whenever
 `client/nginx.conf` changes:
