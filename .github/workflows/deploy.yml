@@ -23,6 +23,7 @@ jobs:
       name: production
     env:
       ImageOS: ubuntu22
+      Home: /root
 
     steps:
       - name: Prepare runner home
