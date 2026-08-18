@@ -42,7 +42,7 @@ jobs:
           rebar3-version: "3"
 
       - name: Deploy backend
-        run: docker compose -p killmestats up -d --build server
+        run: docker compose -p killmestats up -d --build
 
       - name: Deploy frontend
         run: make client-deploy
