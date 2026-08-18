@@ -58,10 +58,7 @@ fn send_stats(
   let stats = stats.get_system_stats()
 
   let time_stats_list = cache.read_whole_cache(context)
-  let data = data.Data(
-    latest_stats: stats,
-    time_stats_list: time_stats_list,
-  )
+  let data = data.Data(latest_stats: stats, time_stats_list: time_stats_list)
 
   let payload =
     data

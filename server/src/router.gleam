@@ -22,8 +22,8 @@ fn handle_api(segments: List(String), req: Request) -> Response {
     // Keep an HTTP fallback for diagnostics and non-WebSocket clients
     ["stats"], Get -> stats.get_stats()
     ["panic"], Post -> panic_program()
-    // ["time-stats"], Get -> ping.get_calculation()
 
+    // ["time-stats"], Get -> ping.get_calculation()
     _, _ -> wisp.not_found()
   }
 }

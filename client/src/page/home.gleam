@@ -31,7 +31,7 @@ pub fn view(
       stats.cpu_load
         |> float.round
         |> int.to_string,
-      bytes.human_readable(stats.ram_used_bytes, False)
+      bytes.gibibytes(stats.ram_used_bytes)
         <> "/"
         <> bytes.compact_gibibytes(stats.ram_total_bytes, True)
         <> " GB",

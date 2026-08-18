@@ -22,6 +22,10 @@ pub fn kibibytes_use_the_correct_suffix_test() {
   assert bytes.human_readable(1024, True) == "1.0KiB"
 }
 
+pub fn ram_usage_can_be_forced_to_gibibytes_test() {
+  assert bytes.gibibytes(1_012_924_826) == "0.94"
+}
+
 pub fn default_connection_limit_test() {
   assert config.max_socket_connections() == 1000
 }

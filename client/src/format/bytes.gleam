@@ -46,6 +46,10 @@ pub fn compact_gibibytes(bytes: Int, round_up: Bool) -> String {
   rounded
 }
 
+pub fn gibibytes(bytes: Int) -> String {
+  format(bytes, gibibyte, "")
+}
+
 fn format(bytes: Int, unit: Int, suffix: String) -> String {
   let value = int.to_float(bytes) /. int.to_float(unit)
 

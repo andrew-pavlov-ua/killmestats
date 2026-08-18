@@ -1,9 +1,9 @@
-import stats_sampler
 import cache
 import gleam/erlang/process
 import log
 import mist
 import router
+import stats_sampler
 import websocket
 import wisp
 import wisp/wisp_mist
