@@ -1,14 +1,12 @@
 # Gleam System Stats
 
-A small full-stack Gleam application that displays the host machine's current
-CPU and RAM utilization together with a 24-hour history chart. The backend runs
-on Erlang/OTP with Wisp and Mist; the browser client is built with Lustre and
-renders history with Chart.js.
+A Gleam dashboard for the host's CPU and RAM usage. The server runs on
+Erlang/OTP with Wisp and Mist. The browser client uses Lustre and Chart.js.
 
 ## Project layout
 
-- `server/` exposes HTTP endpoints and the system-statistics WebSocket, samples
-  statistics every interval_seconds() minutes, and stores the latest 24 hours in ETS.
+- `server/` exposes the HTTP API and WebSocket, samples once an hour, and keeps
+  the latest 24 hours in ETS and PostgreSQL.
 - `client/` receives live statistics and renders the dashboard with Lustre and
   Chart.js.
 - `shared/` contains the statistics and WebSocket payload types used by both
@@ -24,8 +22,7 @@ function interface in `server/src/system_stats/stats.erl`.
 - Docker with Docker Compose for the production server
 - Nginx for serving the production client
 
-The Lustre development command downloads and manages its frontend tooling when
-needed.
+The Lustre development command downloads its frontend tooling when needed.
 
 ## Run locally
 
@@ -62,13 +59,7 @@ defaults are defined in `client/src/config.gleam`; no production `.env`
 file is required for the client.
 
 The application limit does not override limits imposed by the browser or
-operating system. Firefox currently defaults to 200 concurrent WebSocket
-sessions across the browser through its `network.websocket.max-connections`
-preference. Consequently, the page may settle slightly below 200 when other
-pages or browser features already hold WebSockets. This preference can be
-inspected in `about:config`, but increasing it substantially can consume large
-amounts of browser, OS, and server resources. See the
-[Firefox networking defaults](https://searchfox.org/firefox-main/source/modules/libpref/init/all.js).
+operating system.
 
 ## WebSocket protocol
 
@@ -80,7 +71,7 @@ stats
 ```
 
 The server replies with the latest reading and the cached history. A server-side
-sampler records one point at each 15-minute boundary, even when no browser is
+sampler records one point at each hour boundary, even when no browser is
 connected. Samples older than 24 hours are removed, and history is ordered from
 oldest to newest:
 

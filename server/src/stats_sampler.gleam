@@ -19,7 +19,7 @@ pub fn start(context: cache.Context) {
     |> actor.on_message(handle_message)
     |> actor.start()
 
-  // Seed the chart immediately instead of waiting for the next quarter hour
+  // Seed the chart immediately instead of waiting for the next hour
   process.send(sampler.data, Sample)
 
   // Keep timing outside the actor so it stays free to process sample messages
@@ -72,7 +72,7 @@ fn schedule_next(data: process.Subject(Message)) -> Nil {
   schedule_next(data)
 }
 
-// Wait until the next :00, :15, :30, or :45 boundary
+// Wait until the next hour boundary
 fn schedule_first_sample() {
   let interval = cache.interval_seconds()
   let now = timestamp.system_time()

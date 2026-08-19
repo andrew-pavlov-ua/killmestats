@@ -1,6 +1,7 @@
 import data
 import gleam/dynamic/decode
 import gleam/result
+import gleam/time/calendar
 import gleam/time/timestamp
 import pog
 import sysstats
@@ -61,7 +62,7 @@ pub fn get_all_samples(
 }
 
 fn time_stats_row_decoder() -> decode.Decoder(data.TimeStats) {
-  use sampled_at <- decode.field(0, pog.timestamp_decoder())
+  use sampled_at <- decode.field(0, timestamp_decoder())
   use cpu_load <- decode.field(1, decode.float)
   use ram_load <- decode.field(2, decode.float)
   use ram_used_bytes <- decode.field(3, decode.int)
@@ -81,4 +82,19 @@ fn time_stats_row_decoder() -> decode.Decoder(data.TimeStats) {
       ram_total_bytes:,
     ),
   ))
+}
+
+fn timestamp_decoder() -> decode.Decoder(timestamp.Timestamp) {
+  decode.one_of(pog.timestamp_decoder(), [
+    {
+      use date <- decode.field(0, pog.calendar_date_decoder())
+      use time <- decode.field(1, pog.calendar_time_of_day_decoder())
+
+      decode.success(timestamp.from_calendar(
+        date:,
+        time:,
+        offset: calendar.utc_offset,
+      ))
+    },
+  ])
 }

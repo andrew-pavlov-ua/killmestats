@@ -10,6 +10,7 @@ import gleam/int
 import gleam/list
 import gleam/option.{None, Some}
 import gleam/order
+import gleam/string
 import gleam/time/duration
 import gleam/time/timestamp.{type Timestamp}
 import log
@@ -55,8 +56,11 @@ fn load_cache(
 ) {
   let samples_list = case queries.get_all_samples(db) {
     Ok(list) -> list
-    Error(_) -> {
-      log.error("load_cache: error loading stats from postgres")
+    Error(error) -> {
+      log.error(
+        "load_cache: error loading stats from postgres: "
+        <> query_error_to_string(error),
+      )
       []
     }
   }
@@ -67,6 +71,41 @@ fn load_cache(
   })
 
   cache
+}
+
+pub fn query_error_to_string(error: pog.QueryError) -> String {
+  case error {
+    pog.ConstraintViolated(message, constraint, detail) ->
+      "Constraint violated ["
+      <> constraint
+      <> "]: "
+      <> message
+      <> " ("
+      <> detail
+      <> ")"
+    pog.PostgresqlError(code, name, message) ->
+      "Postgres error " <> code <> " (" <> name <> "): " <> message
+    pog.UnexpectedArgumentCount(expected, got) ->
+      "Unexpected argument count: expected "
+      <> int.to_string(expected)
+      <> ", got "
+      <> int.to_string(got)
+    pog.UnexpectedArgumentType(expected, got) ->
+      "Unexpected argument type: expected " <> expected <> ", got " <> got
+    pog.UnexpectedResultType(errors) ->
+      "Unexpected result type (decode error): "
+      <> list.map(errors, fn(error) {
+        "expected "
+        <> error.expected
+        <> ", got "
+        <> error.found
+        <> " at "
+        <> string.join(error.path, "/")
+      })
+      |> string.join("; ")
+    pog.QueryTimeout -> "Query timed out"
+    pog.ConnectionUnavailable -> "Database connection unavailable"
+  }
 }
 
 fn timestamp_from_milliseconds(milliseconds: Int) -> Timestamp {
