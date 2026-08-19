@@ -1,4 +1,5 @@
 import data
+import db/queries
 import dream_ets/config
 import dream_ets/operations
 import dream_ets/table
@@ -7,21 +8,78 @@ import gleam/dynamic/decode
 import gleam/float
 import gleam/int
 import gleam/list
+import gleam/option.{None, Some}
 import gleam/order
 import gleam/time/duration
 import gleam/time/timestamp.{type Timestamp}
 import log
+import pog
 import sysstats
 
 pub fn interval_seconds() -> Int {
   60 * 60
 }
 
-pub type Context {
-  Context(cache: table.Table(timestamp.Timestamp, sysstats.SystemStats))
+// Floor to the start of its sampling interval; do not round to the nearest one.
+pub fn sample_timestamp(now: Timestamp) -> Timestamp {
+  let #(seconds, _) = timestamp.to_unix_seconds_and_nanoseconds(now)
+  let bucket_seconds = seconds / interval_seconds() * interval_seconds()
+
+  timestamp.from_unix_seconds(bucket_seconds)
 }
 
-pub fn create_cache() -> Result(
+pub type Context {
+  Context(
+    cache: table.Table(timestamp.Timestamp, sysstats.SystemStats),
+    db: pog.Connection,
+  )
+}
+
+pub fn init_cache(
+  db_opt: option.Option(pog.Connection),
+) -> Result(table.Table(Timestamp, sysstats.SystemStats), table.EtsError) {
+  let assert Ok(table) = create_cache()
+
+  // load cache from the db
+  case db_opt {
+    Some(db) -> load_cache(table, db)
+    None -> table
+  }
+
+  Ok(table)
+}
+
+fn load_cache(
+  cache: table.Table(timestamp.Timestamp, sysstats.SystemStats),
+  db: pog.Connection,
+) {
+  let samples_list = case queries.get_all_samples(db) {
+    Ok(list) -> list
+    Error(_) -> {
+      log.error("load_cache: error loading stats from postgres")
+      []
+    }
+  }
+
+  list.each(samples_list, fn(stats_sample) {
+    let sampled_at = timestamp_from_milliseconds(stats_sample.timestamp_ms)
+    insert_sample(cache, stats_sample.stats, sampled_at)
+  })
+
+  cache
+}
+
+fn timestamp_from_milliseconds(milliseconds: Int) -> Timestamp {
+  let seconds = milliseconds / 1000
+  let remaining_milliseconds = milliseconds - seconds * 1000
+
+  timestamp.from_unix_seconds_and_nanoseconds(
+    seconds,
+    remaining_milliseconds * 1_000_000,
+  )
+}
+
+fn create_cache() -> Result(
   table.Table(Timestamp, sysstats.SystemStats),
   table.EtsError,
 ) {
@@ -33,24 +91,13 @@ pub fn create_cache() -> Result(
 }
 
 pub fn insert_sample(
-  context: Context,
-  stats: sysstats.SystemStats,
-) -> Result(Nil, table.EtsError) {
-  insert_sample_at(context, stats, timestamp.system_time())
-}
-
-pub fn insert_sample_at(
-  context: Context,
+  cache: table.Table(timestamp.Timestamp, sysstats.SystemStats),
   stats: sysstats.SystemStats,
   now: Timestamp,
 ) -> Result(Nil, table.EtsError) {
-  let #(unix_seconds, _) = timestamp.to_unix_seconds_and_nanoseconds(now)
+  let bucket = sample_timestamp(now)
 
-  let bucket_seconds = unix_seconds / interval_seconds() * interval_seconds()
-
-  let bucket = timestamp.from_unix_seconds(bucket_seconds)
-
-  case operations.insert_new(context.cache, bucket, stats) {
+  case operations.insert_new(cache, bucket, stats) {
     Ok(True) -> {
       log.info(
         "Inserting stats into cache: "
@@ -102,8 +149,10 @@ fn entry_expiration() -> duration.Duration {
   duration.hours(24)
 }
 
-pub fn read_whole_cache(context: Context) -> List(data.TimeStats) {
-  operations.to_list(context.cache)
+pub fn read_whole_cache(
+  cache: table.Table(timestamp.Timestamp, sysstats.SystemStats),
+) -> List(data.TimeStats) {
+  operations.to_list(cache)
   |> list.filter_map(fn(pair) {
     let #(key, value) = pair
     // `difference(left, right)` calculates right - left.
@@ -118,14 +167,19 @@ pub fn read_whole_cache(context: Context) -> List(data.TimeStats) {
   })
 }
 
-pub fn delete_expired(context: Context) -> Nil {
-  delete_expired_at(context, timestamp.system_time())
+pub fn delete_expired(
+  cache: table.Table(timestamp.Timestamp, sysstats.SystemStats),
+) -> Nil {
+  delete_expired_at(cache, timestamp.system_time())
 }
 
-pub fn delete_expired_at(context: Context, now: Timestamp) -> Nil {
+pub fn delete_expired_at(
+  cache: table.Table(timestamp.Timestamp, sysstats.SystemStats),
+  now: Timestamp,
+) -> Nil {
   let expiration = entry_expiration()
 
-  operations.to_list(context.cache)
+  operations.to_list(cache)
   |> list.each(fn(pair) {
     let #(key, _) = pair
     // `difference(left, right)` calculates right - left.
@@ -133,7 +187,7 @@ pub fn delete_expired_at(context: Context, now: Timestamp) -> Nil {
 
     case duration.compare(age, expiration) {
       order.Gt -> {
-        case operations.delete(context.cache, key) {
+        case operations.delete(cache, key) {
           Ok(_) -> Nil
           Error(_) -> log.warning("Failed to delete expired cache entry")
         }

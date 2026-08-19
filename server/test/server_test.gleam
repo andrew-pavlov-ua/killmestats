@@ -5,6 +5,7 @@ import gleam/http.{Delete, Get, Post}
 import gleam/http/response
 import gleam/json
 import gleam/list
+import gleam/option.{None}
 import gleam/time/duration
 import gleam/time/timestamp
 import gleeunit
@@ -92,24 +93,28 @@ fn sample(cpu_load: Float) -> sysstats.SystemStats {
   )
 }
 
+pub fn sampler_timestamps_are_floored_to_the_sampling_interval_test() {
+  let sampled_at =
+    timestamp.from_unix_seconds_and_nanoseconds(1_800_000_999, 123_000_000)
+
+  cache.sample_timestamp(sampled_at)
+  |> timestamp.to_unix_seconds_and_nanoseconds
+  |> should.equal(#(1_800_000_000, 0))
+}
+
 pub fn cache_keeps_first_sample_in_each_interval_test() {
-  let assert Ok(table) = cache.create_cache()
-  let context = cache.Context(table)
+  let assert Ok(table) = cache.init_cache(None)
   let now = timestamp.from_unix_seconds(1_800_000_123)
   let first = sample(12.0)
   let later = sample(34.0)
 
-  cache.insert_sample_at(context, first, now)
+  cache.insert_sample(table, first, now)
   |> should.be_ok
-  cache.insert_sample_at(
-    context,
-    later,
-    timestamp.add(now, duration.minutes(5)),
-  )
+  cache.insert_sample(table, later, timestamp.add(now, duration.minutes(5)))
   |> should.be_ok
 
   let assert [data.TimeStats(timestamp_ms:, stats: stored)] =
-    cache.read_whole_cache(context)
+    cache.read_whole_cache(table)
 
   timestamp_ms
   |> should.equal(1_800_000_000_000)
@@ -121,8 +126,7 @@ pub fn cache_keeps_first_sample_in_each_interval_test() {
 }
 
 pub fn cache_history_is_chronological_test() {
-  let assert Ok(table) = cache.create_cache()
-  let context = cache.Context(table)
+  let assert Ok(table) = cache.init_cache(None)
   let earlier = timestamp.from_unix_seconds(1_800_000_000)
   let later = timestamp.add(earlier, duration.minutes(15))
 
@@ -132,7 +136,7 @@ pub fn cache_history_is_chronological_test() {
   |> should.be_ok
 
   let timestamps =
-    cache.read_whole_cache(context)
+    cache.read_whole_cache(table)
     |> list.map(fn(entry) { entry.timestamp_ms })
 
   timestamps
@@ -143,8 +147,7 @@ pub fn cache_history_is_chronological_test() {
 }
 
 pub fn cache_deletes_only_expired_samples_test() {
-  let assert Ok(table) = cache.create_cache()
-  let context = cache.Context(table)
+  let assert Ok(table) = cache.init_cache(None)
   let now = timestamp.from_unix_seconds(1_800_000_000)
   let expired = timestamp.subtract(now, duration.hours(25))
   let retained = timestamp.subtract(now, duration.hours(23))
@@ -154,10 +157,10 @@ pub fn cache_deletes_only_expired_samples_test() {
   operations.set(table, retained, sample(20.0))
   |> should.be_ok
 
-  cache.delete_expired_at(context, now)
+  cache.delete_expired_at(table, now)
 
   let assert [data.TimeStats(stats: remaining, ..)] =
-    cache.read_whole_cache(context)
+    cache.read_whole_cache(table)
   remaining
   |> should.equal(sample(20.0))
 

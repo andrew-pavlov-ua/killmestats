@@ -1,5 +1,7 @@
 import cache
+import db/postgres
 import gleam/erlang/process
+import gleam/option
 import log
 import mist
 import router
@@ -12,8 +14,10 @@ pub fn main() -> Nil {
   wisp.configure_logger()
   let secret_key_base = wisp.random_string(64)
 
-  let assert Ok(table) = cache.create_cache()
-  let context = cache.Context(table)
+  let assert Ok(db) = postgres.init_db()
+  let assert Ok(table) = cache.init_cache(option.Some(db))
+
+  let context = cache.Context(table, db)
 
   stats_sampler.start(context)
 

@@ -1,0 +1,12 @@
+# Generated Gleam artifacts contain symlinks that are valid only on the host.
+# Sending them to Docker makes `gleam run` fail while it recreates package links.
+**/build
+
+# This image only copies shared/ and server/.
+client
+.git
+
+# Keep local configuration and package-manager artifacts out of the build context.
+.env
+.env.*
+**/node_modules
