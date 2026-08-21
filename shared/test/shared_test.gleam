@@ -22,6 +22,7 @@ pub fn data_json_round_trip_test() {
         data.TimeStats(timestamp_ms: 1_700_000_000_000, stats:),
       ],
       live_users: 7,
+      returning_visitor: False,
     )
 
   let encoded = payload |> data.to_json |> json.to_string

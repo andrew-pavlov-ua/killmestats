@@ -2,11 +2,14 @@ import app/extra_websocket
 import app/state
 import app/update
 import config
+import data
 import format/bytes
 import gleam/int
+import gleam/json
 import gleam/list
 import gleam/option.{None, Some}
 import gleeunit
+import lustre_websocket as websocket
 import sysstats
 import ui/charts
 
@@ -135,6 +138,43 @@ pub fn github_star_count_accepts_success_and_ignores_failure_test() {
   assert failed.github_stars == None
 }
 
+pub fn first_visit_payload_opens_welcome_once_test() {
+  let payload = stats_payload(False)
+  let message = state.SocketEvent(0, websocket.OnTextMessage(payload))
+
+  let #(welcomed, _) = update.update(base_model(), message)
+  assert welcomed.returning_visitor == Some(False)
+  assert welcomed.welcome_open == True
+
+  let #(dismissed, _) = update.update(welcomed, state.DismissWelcome)
+  assert dismissed.welcome_open == False
+
+  let #(updated_again, _) = update.update(dismissed, message)
+  assert updated_again.welcome_open == False
+}
+
+pub fn escape_closes_welcome_test() {
+  let model = state.Model(..base_model(), welcome_open: True)
+  let #(closed, _) = update.update(model, state.WelcomeKeyPressed("Escape"))
+  assert closed.welcome_open == False
+}
+
+fn stats_payload(returning_visitor: Bool) -> String {
+  data.Data(
+    latest_stats: sysstats.SystemStats(
+      cpu_load: 12.0,
+      ram_load: 34.0,
+      ram_used_bytes: 340,
+      ram_total_bytes: 1000,
+    ),
+    time_stats_list: [],
+    live_users: 1,
+    returning_visitor:,
+  )
+  |> data.to_json
+  |> json.to_string
+}
+
 fn model_with_connections(
   connections: List(state.Connection),
   next_connection_id: Int,
@@ -162,6 +202,8 @@ fn base_model() -> state.Model {
     probe_info_open: False,
     github_stars: None,
     live_users: 0,
+    returning_visitor: None,
+    welcome_open: False,
     connection_timed_out: False,
     socket: None,
     primary_connection_id: 0,

@@ -40,6 +40,15 @@ pub fn update(
       effect.none(),
     )
     state.ProbeInfoKeyPressed(_) -> #(model, effect.none())
+    state.DismissWelcome -> #(
+      state.Model(..model, welcome_open: False),
+      effect.none(),
+    )
+    state.WelcomeKeyPressed("Escape") -> #(
+      state.Model(..model, welcome_open: False),
+      effect.none(),
+    )
+    state.WelcomeKeyPressed(_) -> #(model, effect.none())
     state.GitHubStarsLoaded(count) -> #(
       state.Model(..model, github_stars: case count >= 0 {
         True -> Some(count)
@@ -94,6 +103,13 @@ pub fn update(
             )
           let timestamps =
             list.map(data.time_stats_list, fn(sample) { sample.timestamp_ms })
+          let welcome_open = case
+            model.returning_visitor,
+            data.returning_visitor
+          {
+            None, False -> True
+            _, _ -> model.welcome_open
+          }
 
           #(
             state.Model(
@@ -102,6 +118,8 @@ pub fn update(
               cpu_history: cpu_history,
               ram_history: ram_history,
               live_users: data.live_users,
+              returning_visitor: Some(data.returning_visitor),
+              welcome_open:,
               server_status: state.Alive,
             ),
             charts.render(cpu_history, ram_history, timestamps),

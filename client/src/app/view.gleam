@@ -1,8 +1,9 @@
 import config
 import gleam/list
-import lustre/element.{type Element, text}
+import lustre/element.{type Element, none, text}
 import page/home
 import ui/app_header
+import ui/welcome_dialog
 
 import lustre/attribute
 import lustre/element/html.{a, div}
@@ -40,17 +41,33 @@ pub fn view(model: state.Model) -> Element(state.Msg) {
       )
   }
 
+  let content_attributes = case model.welcome_open {
+    True -> [
+      attribute.attribute("inert", ""),
+      attribute.aria_hidden(True),
+    ]
+    False -> []
+  }
+
+  let welcome = case model.welcome_open {
+    True -> welcome_dialog.view(state.DismissWelcome, state.WelcomeKeyPressed)
+    False -> none()
+  }
+
   div([attribute.class("min-h-screen overflow-x-clip")], [
-    a(
-      [
-        attribute.href("#main-content"),
-        attribute.class(
-          "bg-gleam-yellow border-gleam-ink fixed left-4 top-4 z-50 -translate-y-24 rounded-lg border-2 px-4 py-2 font-mono font-bold shadow-gleam transition-transform focus-visible:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gleam-ink focus-visible:ring-offset-2",
-        ),
-      ],
-      [text("Skip to Main Content")],
-    ),
-    app_header.view(model.server_status, model.github_stars),
-    page,
+    div(content_attributes, [
+      a(
+        [
+          attribute.href("#main-content"),
+          attribute.class(
+            "bg-gleam-yellow border-gleam-ink fixed left-4 top-4 z-50 -translate-y-24 rounded-lg border-2 px-4 py-2 font-mono font-bold shadow-gleam transition-transform focus-visible:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gleam-ink focus-visible:ring-offset-2",
+          ),
+        ],
+        [text("Skip to Main Content")],
+      ),
+      app_header.view(model.server_status, model.github_stars),
+      page,
+    ]),
+    welcome,
   ])
 }

@@ -18,6 +18,8 @@ pub type Model {
     probe_info_open: Bool,
     github_stars: Option(Int),
     live_users: Int,
+    returning_visitor: Option(Bool),
+    welcome_open: Bool,
     connection_timed_out: Bool,
     socket: Option(websocket.WebSocket),
     primary_connection_id: Int,
@@ -37,6 +39,8 @@ pub type Msg {
   UserClickedPanic
   ToggleProbeInfo
   ProbeInfoKeyPressed(String)
+  DismissWelcome
+  WelcomeKeyPressed(String)
   GitHubStarsLoaded(Int)
   AddConnection
   RemoveConnection

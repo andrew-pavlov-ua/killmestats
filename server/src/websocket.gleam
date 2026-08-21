@@ -1,15 +1,23 @@
+import cache
 import context
+import db/queries
 import gleam/erlang/process
 import gleam/http/request
 import gleam/http/response.{type Response}
-import gleam/option.{None, Some}
+import gleam/option.{type Option, None, Some}
 import live_users
+import log
 import mist
 import system_stats/payload
 import websocket_hub
 
 type SocketState {
-  SocketState(hub_id: Int, live_user_registered: Bool)
+  SocketState(
+    hub_id: Int,
+    live_user_registered: Bool,
+    returning_visitor: Bool,
+    ip_address: Option(String),
+  )
 }
 
 /// Routes WebSocket upgrades before passing ordinary HTTP requests to Wisp.
@@ -21,13 +29,17 @@ pub fn handle(
   context: context.Context,
 ) -> Response(mist.ResponseData) {
   case request.path_segments(req) {
-    ["api", "ws"] ->
+    ["api", "ws"] -> {
+      let #(ip_address, returning_visitor) = lookup_visitor(req, context)
+
       mist.websocket(
         request: req,
         handler: fn(state, message, connection) {
           handle_message(state, message, connection, context)
         },
-        on_init: fn(_connection) { init_primary_socket(context) },
+        on_init: fn(_connection) {
+          init_primary_socket(context, returning_visitor, ip_address)
+        },
         on_close: fn(state) {
           websocket_hub.unregister(context.ws_hub, state.hub_id)
 
@@ -37,6 +49,7 @@ pub fn handle(
           }
         },
       )
+    }
 
     ["api", "load"] ->
       mist.websocket(
@@ -50,7 +63,11 @@ pub fn handle(
   }
 }
 
-fn init_primary_socket(context: context.Context) {
+fn init_primary_socket(
+  context: context.Context,
+  returning_visitor: Bool,
+  ip_address: Option(String),
+) {
   let inbox = process.new_subject()
   let hub_id = websocket_hub.register(context.ws_hub, inbox)
 
@@ -58,7 +75,15 @@ fn init_primary_socket(context: context.Context) {
     process.new_selector()
     |> process.select(inbox)
 
-  #(SocketState(hub_id:, live_user_registered: False), Some(selector))
+  #(
+    SocketState(
+      hub_id:,
+      live_user_registered: False,
+      returning_visitor:,
+      ip_address:,
+    ),
+    Some(selector),
+  )
 }
 
 fn handle_message(
@@ -77,7 +102,12 @@ fn handle_message(
         }
       }
 
-      send_payload(connection, state, payload.encode(context))
+      let encoded = payload.encode(context, state.returning_visitor)
+
+      case mist.send_text_frame(connection, encoded) {
+        Ok(Nil) -> mist.continue(record_first_visit(state, context))
+        Error(_) -> mist.stop_abnormal("Could not send system stats")
+      }
     }
     mist.Text(_) -> mist.continue(state)
 
@@ -86,8 +116,12 @@ fn handle_message(
       mist.continue(state)
 
     mist.Closed | mist.Shutdown -> mist.stop()
-    mist.Custom(websocket_hub.StatsUpdated(payload)) ->
-      send_payload(connection, state, payload)
+    mist.Custom(websocket_hub.StatsUpdated) ->
+      send_payload(
+        connection,
+        state,
+        payload.encode(context, state.returning_visitor),
+      )
   }
 }
 
@@ -110,5 +144,69 @@ fn handle_load_message(
   case message {
     mist.Text(_) | mist.Binary(_) | mist.Custom(_) -> mist.continue(state)
     mist.Closed | mist.Shutdown -> mist.stop()
+  }
+}
+
+fn lookup_visitor(
+  req: request.Request(mist.Connection),
+  context: context.Context,
+) -> #(Option(String), Bool) {
+  case client_ip(req) {
+    Ok(ip_address) -> {
+      let returning_visitor = case
+        queries.user_exists_ip(context.db, ip_address)
+      {
+        Ok(result) -> result
+        Error(error) -> {
+          log.error(
+            "Failed to check whether the client IP is registered: "
+            <> cache.query_error_to_string(error),
+          )
+          True
+        }
+      }
+
+      #(Some(ip_address), returning_visitor)
+    }
+    Error(_) -> #(None, True)
+  }
+}
+
+fn record_first_visit(
+  state: SocketState,
+  context: context.Context,
+) -> SocketState {
+  case state.returning_visitor, state.ip_address {
+    False, Some(ip_address) ->
+      case queries.insert_user_ip(context.db, ip_address) {
+        Ok(Nil) -> SocketState(..state, returning_visitor: True)
+        Error(error) -> {
+          log.error(
+            "Failed to register the client IP: "
+            <> cache.query_error_to_string(error),
+          )
+          state
+        }
+      }
+    _, _ -> state
+  }
+}
+
+fn client_ip(req: request.Request(mist.Connection)) -> Result(String, Nil) {
+  case request.get_header(req, "x-real-ip") {
+    Ok(ip) -> Ok(ip)
+
+    Error(_) ->
+      case mist.get_connection_info(req.body) {
+        Ok(info) ->
+          info.ip_address
+          |> mist.ip_address_to_string
+          |> Ok
+
+        Error(_) -> {
+          log.warning("Client IP unavailable")
+          Error(Nil)
+        }
+      }
   }
 }

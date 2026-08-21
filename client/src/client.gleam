@@ -30,6 +30,8 @@ fn init(_flags) {
       probe_info_open: False,
       github_stars: None,
       live_users: 0,
+      returning_visitor: None,
+      welcome_open: False,
       connection_timed_out: False,
       socket: None,
       primary_connection_id: 0,

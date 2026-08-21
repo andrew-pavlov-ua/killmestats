@@ -31,18 +31,18 @@ pub fn websocket_hub_broadcasts_and_unregisters_clients_test() {
   let first_id = websocket_hub.register(hub, first)
   let _second_id = websocket_hub.register(hub, second)
 
-  websocket_hub.broadcast(hub, "first payload")
+  websocket_hub.broadcast(hub)
   process.receive(first, within: 100)
-  |> should.equal(Ok(websocket_hub.StatsUpdated("first payload")))
+  |> should.equal(Ok(websocket_hub.StatsUpdated))
   process.receive(second, within: 100)
-  |> should.equal(Ok(websocket_hub.StatsUpdated("first payload")))
+  |> should.equal(Ok(websocket_hub.StatsUpdated))
 
   websocket_hub.unregister(hub, first_id)
-  websocket_hub.broadcast(hub, "second payload")
+  websocket_hub.broadcast(hub)
   process.receive(first, within: 20)
   |> should.equal(Error(Nil))
   process.receive(second, within: 100)
-  |> should.equal(Ok(websocket_hub.StatsUpdated("second payload")))
+  |> should.equal(Ok(websocket_hub.StatsUpdated))
 }
 
 fn handle_request(req) {

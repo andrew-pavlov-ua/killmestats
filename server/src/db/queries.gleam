@@ -61,6 +61,49 @@ pub fn get_all_samples(
   |> result.map(fn(returned) { returned.rows })
 }
 
+pub fn user_exists_ip(
+  db: pog.Connection,
+  ip_address: String,
+) -> Result(Bool, pog.QueryError) {
+  "
+  SELECT EXISTS (
+    SELECT 1
+    FROM users
+    WHERE ip_address = $1::text::inet
+  )
+  "
+  |> pog.query
+  |> pog.parameter(pog.text(ip_address))
+  |> pog.returning(user_exists_decoder())
+  |> pog.execute(db)
+  |> result.map(fn(returned) {
+    case returned.rows {
+      [exists] -> exists
+      _ -> False
+    }
+  })
+}
+
+pub fn insert_user_ip(
+  db: pog.Connection,
+  ip_address: String,
+) -> Result(Nil, pog.QueryError) {
+  "
+  INSERT INTO users (ip_address)
+  VALUES ($1::text::inet)
+  ON CONFLICT (ip_address) DO NOTHING
+  "
+  |> pog.query
+  |> pog.parameter(pog.text(ip_address))
+  |> pog.execute(db)
+  |> result.map(fn(_) { Nil })
+}
+
+fn user_exists_decoder() -> decode.Decoder(Bool) {
+  use exists <- decode.field(0, decode.bool)
+  decode.success(exists)
+}
+
 fn time_stats_row_decoder() -> decode.Decoder(data.TimeStats) {
   use sampled_at <- decode.field(0, timestamp_decoder())
   use cpu_load <- decode.field(1, decode.float)

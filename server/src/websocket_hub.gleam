@@ -4,7 +4,7 @@ import gleam/list
 import gleam/otp/actor
 
 pub type Push {
-  StatsUpdated(payload: String)
+  StatsUpdated
 }
 
 pub opaque type Hub {
@@ -18,7 +18,7 @@ type State {
 type Message {
   Register(client: Subject(Push), reply_to: Subject(Int))
   Unregister(id: Int)
-  Broadcast(payload: String)
+  Broadcast
 }
 
 pub fn start() -> Hub {
@@ -43,9 +43,9 @@ pub fn unregister(hub: Hub, id: Int) -> Nil {
   actor.send(subject, Unregister(id:))
 }
 
-pub fn broadcast(hub: Hub, payload: String) -> Nil {
+pub fn broadcast(hub: Hub) -> Nil {
   let Hub(subject) = hub
-  actor.send(subject, Broadcast(payload:))
+  actor.send(subject, Broadcast)
 }
 
 fn handle_message(
@@ -65,10 +65,10 @@ fn handle_message(
     Unregister(id) ->
       actor.continue(State(..state, clients: dict.delete(state.clients, id)))
 
-    Broadcast(payload) -> {
+    Broadcast -> {
       state.clients
       |> dict.values
-      |> list.each(fn(client) { process.send(client, StatsUpdated(payload:)) })
+      |> list.each(fn(client) { process.send(client, StatsUpdated) })
 
       actor.continue(state)
     }

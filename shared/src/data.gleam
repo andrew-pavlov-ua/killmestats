@@ -10,6 +10,7 @@ pub type Data {
     latest_stats: sysstats.SystemStats,
     time_stats_list: List(TimeStats),
     live_users: Int,
+    returning_visitor: Bool,
   )
 }
 
@@ -34,6 +35,7 @@ pub fn to_json(data: Data) -> Json {
         #("latestStats", sysstats.to_json(data.latest_stats)),
         #("timeStatsList", time_stats_json),
         #("liveUsers", json.int(data.live_users)),
+        #("returningVisitor", json.bool(data.returning_visitor)),
       ]),
     ),
   ])
@@ -57,7 +59,17 @@ pub fn decoder() -> Decoder(Data) {
     sysstats.decoder(),
   )
 
+  use returning_visitor <- decode.subfield(
+    ["data", "returningVisitor"],
+    decode.bool,
+  )
+
   use live_users <- decode.subfield(["data", "liveUsers"], decode.int)
 
-  decode.success(Data(time_stats_list:, latest_stats:, live_users:))
+  decode.success(Data(
+    time_stats_list:,
+    latest_stats:,
+    live_users:,
+    returning_visitor:,
+  ))
 }
