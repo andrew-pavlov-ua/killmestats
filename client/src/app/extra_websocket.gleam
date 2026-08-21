@@ -1,19 +1,14 @@
 import app/state
 import config
-import ffi/timer
 import gleam/int
 import gleam/list
-import gleam/option.{type Option, None, Some}
+import gleam/option.{None, Some}
 import gleam/uri.{Uri}
 import lustre/effect.{type Effect}
 import lustre_websocket as websocket
 
-const poll_interval_ms = 1000
-
-const connection_timeout_ms = 4000
-
 pub fn set_connection_count(model: state.Model, value: String) {
-  set_connection_count_at(model, value, websocket_url())
+  set_connection_count_at(model, value, load_websocket_url())
 }
 
 pub fn set_connection_count_at(model: state.Model, value: String, url: String) {
@@ -49,7 +44,7 @@ pub fn resize_connections(
 }
 
 pub fn add_connection(model: state.Model) {
-  add_connection_at(model, websocket_url())
+  add_connection_at(model, load_websocket_url())
 }
 
 pub fn add_connection_at(model: state.Model, url: String) {
@@ -111,50 +106,15 @@ pub fn update_extra_socket(
                 _ -> connection
               }
             })
-          #(
-            state.Model(..model, connections: connections),
-            websocket.send(socket, "stats"),
-          )
+          #(state.Model(..model, connections: connections), effect.none())
         }
       }
     }
-    websocket.OnTextMessage(_) ->
-      case connection_exists(model.connections, id) {
-        False -> #(model, effect.none())
-        True -> #(model, schedule_extra_fetch(id))
-      }
+    websocket.OnTextMessage(_) -> #(model, effect.none())
     websocket.OnBinaryMessage(_) -> #(model, effect.none())
     websocket.InvalidUrl -> #(remove_extra_connection(model, id), effect.none())
     websocket.OnClose(_) -> #(remove_extra_connection(model, id), effect.none())
   }
-}
-
-pub fn poll_extra_socket(model: state.Model, id: Int) {
-  case find_connected_socket(model.connections, id) {
-    None -> #(model, effect.none())
-    Some(socket) -> #(model, websocket.send(socket, "stats"))
-  }
-}
-
-fn find_connected_socket(
-  connections: List(state.Connection),
-  id: Int,
-) -> Option(websocket.WebSocket) {
-  case connections {
-    [] -> None
-    [state.Connected(connection_id, socket), ..] if connection_id == id ->
-      Some(socket)
-    [_, ..rest] -> find_connected_socket(rest, id)
-  }
-}
-
-fn connection_exists(connections: List(state.Connection), id: Int) -> Bool {
-  list.any(connections, fn(connection) {
-    case connection {
-      state.Connecting(connection_id) | state.Connected(connection_id, _) ->
-        connection_id == id
-    }
-  })
 }
 
 fn remove_extra_connection(model: state.Model, id: Int) -> state.Model {
@@ -169,19 +129,15 @@ fn remove_extra_connection(model: state.Model, id: Int) -> state.Model {
   )
 }
 
-pub fn connect_websocket(id: Int) -> Effect(state.Msg) {
-  // The timeout is not cancelled; it is harmless after the socket opens.
-  effect.batch([
-    websocket.init(websocket_url(), fn(event) { state.SocketEvent(id, event) }),
-    timer.after(connection_timeout_ms, state.ConnectionTimedOut(id)),
-  ])
-}
-
-fn schedule_extra_fetch(id: Int) -> Effect(state.Msg) {
-  timer.after(poll_interval_ms, state.ExtraTick(id))
-}
-
 pub fn websocket_url() -> String {
+  websocket_url_for("/api/ws")
+}
+
+pub fn load_websocket_url() -> String {
+  websocket_url_for("/api/load")
+}
+
+fn websocket_url_for(path: String) -> String {
   // Lustre's dev server and the API run on separate ports during local development.
   case websocket.page_uri() {
     Ok(uri) if uri.port == Some(1234) ->
@@ -189,12 +145,12 @@ pub fn websocket_url() -> String {
         ..uri,
         scheme: Some("ws"),
         port: Some(8000),
-        path: "/api/ws",
+        path: path,
         query: None,
         fragment: None,
       )
       |> uri.to_string
 
-    _ -> "/api/ws"
+    _ -> path
   }
 }

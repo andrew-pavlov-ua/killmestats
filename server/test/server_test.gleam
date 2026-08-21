@@ -1,6 +1,7 @@
 import cache
 import data
 import dream_ets/operations
+import gleam/erlang/process
 import gleam/http.{Delete, Get, Post}
 import gleam/http/response
 import gleam/json
@@ -14,11 +15,34 @@ import live_users
 import router
 import sysstats
 import system_stats/stats
+import websocket_hub
 import wisp.{Text}
 import wisp/simulate
 
 pub fn main() -> Nil {
   gleeunit.main()
+}
+
+pub fn websocket_hub_broadcasts_and_unregisters_clients_test() {
+  let hub = websocket_hub.start()
+  let first = process.new_subject()
+  let second = process.new_subject()
+
+  let first_id = websocket_hub.register(hub, first)
+  let _second_id = websocket_hub.register(hub, second)
+
+  websocket_hub.broadcast(hub, "first payload")
+  process.receive(first, within: 100)
+  |> should.equal(Ok(websocket_hub.StatsUpdated("first payload")))
+  process.receive(second, within: 100)
+  |> should.equal(Ok(websocket_hub.StatsUpdated("first payload")))
+
+  websocket_hub.unregister(hub, first_id)
+  websocket_hub.broadcast(hub, "second payload")
+  process.receive(first, within: 20)
+  |> should.equal(Error(Nil))
+  process.receive(second, within: 100)
+  |> should.equal(Ok(websocket_hub.StatsUpdated("second payload")))
 }
 
 fn handle_request(req) {

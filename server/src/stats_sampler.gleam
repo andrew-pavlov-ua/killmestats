@@ -1,4 +1,5 @@
 import cache
+import context
 import db/queries
 import gleam/erlang/process
 import gleam/int
@@ -12,7 +13,7 @@ type Message {
   Sample
 }
 
-pub fn start(context: cache.Context) {
+pub fn start(context: context.Context) {
   // The actor shares the ETS table created by the main server process
   let assert Ok(sampler) =
     actor.new(context)
@@ -32,9 +33,9 @@ pub fn start(context: cache.Context) {
 }
 
 fn handle_message(
-  context: cache.Context,
+  context: context.Context,
   message: Message,
-) -> actor.Next(cache.Context, Message) {
+) -> actor.Next(context.Context, Message) {
   case message {
     Sample -> {
       // Cleanup runs with sampling, not on every WebSocket history read

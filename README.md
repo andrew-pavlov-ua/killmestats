@@ -54,7 +54,7 @@ to `Alive`.
 
 Local development connects directly to `http://localhost:8000`. The production
 client uses same-origin `/api` requests, which host Nginx proxies to the server
-on `127.0.0.1:8000`. The default WebSocket connection limit is 1000. These
+on `127.0.0.1:8000`. The default extra WebSocket connection limit is 500. These
 defaults are defined in `client/src/config.gleam`; no production `.env`
 file is required for the client.
 
@@ -63,17 +63,15 @@ operating system.
 
 ## WebSocket protocol
 
-Connect to `GET /api/ws` using a WebSocket upgrade. The client sends this text
-command whenever it wants the current sample:
+Connect to `GET /api/ws` using a WebSocket upgrade. The primary client sends
+`client_stats` once after connecting. The server sends an initial snapshot,
+then broadcasts a fresh snapshot every second. A separate
+`/api/load` WebSocket endpoint accepts the extra load-test connections without
+sending statistics to each one.
 
-```text
-stats
-```
-
-The server replies with the latest reading and the cached history. A server-side
-sampler records one point at each hour boundary, even when no browser is
-connected. Samples older than 24 hours are removed, and history is ordered from
-oldest to newest:
+An hourly sampler records chart history even when no browser is connected.
+Samples older than 24 hours are removed, and history is ordered from oldest to
+newest:
 
 ```json
 {
@@ -94,7 +92,8 @@ oldest to newest:
           "ram_total_bytes": 17179869184
         }
       }
-    ]
+    ],
+    "liveUsers": 1
   }
 }
 ```

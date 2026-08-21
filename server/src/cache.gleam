@@ -29,13 +29,6 @@ pub fn sample_timestamp(now: Timestamp) -> Timestamp {
   timestamp.from_unix_seconds(bucket_seconds)
 }
 
-pub type Context {
-  Context(
-    cache: table.Table(timestamp.Timestamp, sysstats.SystemStats),
-    db: pog.Connection,
-  )
-}
-
 pub fn init_cache(
   db_opt: option.Option(pog.Connection),
 ) -> Result(table.Table(Timestamp, sysstats.SystemStats), table.EtsError) {

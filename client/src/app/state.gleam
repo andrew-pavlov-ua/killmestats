@@ -31,7 +31,6 @@ pub type Connection {
 
 pub type Msg {
   Tick(Int)
-  ExtraTick(Int)
   ConnectionTimedOut(Int)
   UserClickedPanic
   AddConnection

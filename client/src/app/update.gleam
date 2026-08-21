@@ -14,8 +14,6 @@ import lustre/effect.{type Effect}
 import lustre_websocket as websocket
 import ui/charts
 
-const poll_interval_ms = 1000
-
 const reconnect_interval_ms = 250
 
 const connection_timeout_ms = 4000
@@ -34,7 +32,6 @@ pub fn update(
     state.SetConnectionCount(value) -> su.set_connection_count(model, value)
     state.ExtraSocketEvent(id, event) ->
       su.update_extra_socket(model, id, event)
-    state.ExtraTick(id) -> su.poll_extra_socket(model, id)
     // Events from an earlier connection attempt must not replace the active socket.
     state.SocketEvent(id, event) if id != model.primary_connection_id ->
       case event {
@@ -62,7 +59,7 @@ pub fn update(
         websocket.send(socket, "client_stats"),
       )
     }
-    state.SocketEvent(id, websocket.OnTextMessage(payload)) -> {
+    state.SocketEvent(_, websocket.OnTextMessage(payload)) -> {
       case json.parse(payload, data.decoder()) {
         Ok(data) -> {
           let cpu_history =
@@ -89,10 +86,7 @@ pub fn update(
               live_users: data.live_users,
               server_status: state.Alive,
             ),
-            effect.batch([
-              schedule_next_fetch(id),
-              charts.render(cpu_history, ram_history, timestamps),
-            ]),
+            charts.render(cpu_history, ram_history, timestamps),
           )
         }
         Error(err) -> {
@@ -100,7 +94,7 @@ pub fn update(
             "Invalid stats WebSocket message: "
             <> error.json_decode_message(err),
           )
-          #(model, schedule_next_fetch(id))
+          #(model, effect.none())
         }
       }
     }
@@ -110,7 +104,7 @@ pub fn update(
     )
     state.Tick(id) -> {
       case model.socket {
-        Some(socket) -> #(model, websocket.send(socket, "client_stats"))
+        Some(_) -> #(model, effect.none())
 
         None -> #(model, connect_websocket(id))
       }
@@ -191,10 +185,6 @@ pub fn connect_websocket(id: Int) -> Effect(state.Msg) {
     }),
     timer.after(connection_timeout_ms, state.ConnectionTimedOut(id)),
   ])
-}
-
-fn schedule_next_fetch(id: Int) -> Effect(state.Msg) {
-  timer.after(poll_interval_ms, state.Tick(id))
 }
 
 fn schedule_reconnect(id: Int) -> Effect(state.Msg) {

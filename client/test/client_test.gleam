@@ -32,7 +32,7 @@ pub fn default_connection_limit_test() {
 
 pub fn add_connection_prepends_new_connection_test() {
   let model = model_with_connections([state.Connecting(7)], 8)
-  let #(updated, _) = extra_websocket.add_connection_at(model, "/api/ws")
+  let #(updated, _) = extra_websocket.add_connection_at(model, "/api/load")
 
   assert updated.connections == [state.Connecting(8), state.Connecting(7)]
   assert updated.next_connection_id == 9
@@ -49,7 +49,7 @@ pub fn remove_connection_does_nothing_when_no_extras_exist_test() {
 pub fn set_connection_count_grows_to_requested_total_test() {
   let model = model_with_connections([], 0)
   let #(updated, _) =
-    extra_websocket.set_connection_count_at(model, "4", "/api/ws")
+    extra_websocket.set_connection_count_at(model, "4", "/api/load")
 
   assert list.length(updated.connections) == 4
   assert updated.next_connection_id == 4
@@ -62,7 +62,7 @@ pub fn set_connection_count_allows_zero_test() {
       4,
     )
   let #(updated, _) =
-    extra_websocket.set_connection_count_at(model, "0", "/api/ws")
+    extra_websocket.set_connection_count_at(model, "0", "/api/load")
 
   assert updated.connections == []
 }
@@ -70,7 +70,7 @@ pub fn set_connection_count_allows_zero_test() {
 pub fn invalid_connection_count_does_not_change_model_test() {
   let model = model_with_connections([state.Connecting(1)], 2)
   let #(updated, _) =
-    extra_websocket.set_connection_count_at(model, "many", "/api/ws")
+    extra_websocket.set_connection_count_at(model, "many", "/api/load")
 
   assert updated.connections == model.connections
   assert updated.next_connection_id == model.next_connection_id

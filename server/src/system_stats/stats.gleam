@@ -23,14 +23,6 @@ pub fn get_system_stats() -> SystemStats {
   let cpu_load = cpu_load()
   let #(ram_load, ram_used_bytes, ram_total_bytes) = memory_stats()
 
-  // case cpu_load == 0.0 {
-  //   True ->
-  //     io.print_error(
-  //       "Warning: CPU load is 0%; the system may be idle, or os_mon/cpu_sup may be unavailable.\n",
-  //     )
-  //   False -> Nil
-  // }
-
   case ram_load == 0.0 {
     True ->
       io.print_error(
