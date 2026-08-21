@@ -7,7 +7,9 @@ import gleam/result
 import gleam/string
 import lustre/attribute
 import lustre/element.{type Element, text}
-import lustre/element/html.{button, code, div, h1, h2, input, main, p, pre, span, a}
+import lustre/element/html.{
+  a, button, code, div, h1, h2, input, main, p, pre, span,
+}
 import lustre/element/svg
 import lustre/event
 import sysstats.{type SystemStats}
@@ -418,8 +420,16 @@ fn probe_info(close: msg, key_pressed: fn(String) -> msg) -> Element(msg) {
           [
             code([], [
               a(
-                [attribute.href("https://github.com/andrew-pavlov-ua/killmestats/blob/master/server/src/router.gleam")],
-                [text("fn panic_program() {\n  log.info(\"Triggering intentional panic\")\n  panic\n}")]
+                [
+                  attribute.href(
+                    "https://github.com/andrew-pavlov-ua/killmestats/blob/master/server/src/router.gleam",
+                  ),
+                ],
+                [
+                  text(
+                    "fn panic_program() {\n  log.info(\"Triggering intentional panic\")\n  panic\n}",
+                  ),
+                ],
               ),
             ]),
           ],
