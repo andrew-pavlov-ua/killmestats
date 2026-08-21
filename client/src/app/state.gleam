@@ -15,6 +15,8 @@ pub type Model {
     ram_history: List(Float),
     server_status: ServerStatus,
     terminal_lines: List(String),
+    probe_info_open: Bool,
+    github_stars: Option(Int),
     live_users: Int,
     connection_timed_out: Bool,
     socket: Option(websocket.WebSocket),
@@ -33,9 +35,13 @@ pub type Msg {
   Tick(Int)
   ConnectionTimedOut(Int)
   UserClickedPanic
+  ToggleProbeInfo
+  ProbeInfoKeyPressed(String)
+  GitHubStarsLoaded(Int)
   AddConnection
   RemoveConnection
   SetConnectionCount(String)
+  OpenExtraSocket(Int, String)
   SocketEvent(Int, websocket.WebSocketEvent)
   ExtraSocketEvent(Int, websocket.WebSocketEvent)
 }

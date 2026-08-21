@@ -5,7 +5,7 @@ import config
 import format/bytes
 import gleam/int
 import gleam/list
-import gleam/option.{None}
+import gleam/option.{None, Some}
 import gleeunit
 import sysstats
 import ui/charts
@@ -53,6 +53,14 @@ pub fn set_connection_count_grows_to_requested_total_test() {
 
   assert list.length(updated.connections) == 4
   assert updated.next_connection_id == 4
+}
+
+pub fn opening_a_removed_queued_connection_is_ignored_test() {
+  let model = model_with_connections([], 2)
+  let #(updated, _) =
+    extra_websocket.open_extra_socket_at(model, 1, "/api/load")
+
+  assert updated == model
 }
 
 pub fn set_connection_count_allows_zero_test() {
@@ -111,6 +119,22 @@ pub fn panic_click_reports_when_server_is_unreachable_test() {
     ]
 }
 
+pub fn probe_info_opens_and_escape_closes_it_test() {
+  let #(opened, _) = update.update(base_model(), state.ToggleProbeInfo)
+  assert opened.probe_info_open == True
+
+  let #(closed, _) = update.update(opened, state.ProbeInfoKeyPressed("Escape"))
+  assert closed.probe_info_open == False
+}
+
+pub fn github_star_count_accepts_success_and_ignores_failure_test() {
+  let #(loaded, _) = update.update(base_model(), state.GitHubStarsLoaded(7))
+  assert loaded.github_stars == Some(7)
+
+  let #(failed, _) = update.update(loaded, state.GitHubStarsLoaded(-1))
+  assert failed.github_stars == None
+}
+
 fn model_with_connections(
   connections: List(state.Connection),
   next_connection_id: Int,
@@ -135,6 +159,8 @@ fn base_model() -> state.Model {
     ram_history: [],
     server_status: state.Checking,
     terminal_lines: [],
+    probe_info_open: False,
+    github_stars: None,
     live_users: 0,
     connection_timed_out: False,
     socket: None,

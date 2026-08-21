@@ -26,6 +26,7 @@ pub fn view(model: state.Model) -> Element(state.Msg) {
         model.ram_history,
         model.server_status,
         model.terminal_lines,
+        model.probe_info_open,
         model.live_users,
         list.length(model.connections),
         connected_count,
@@ -34,6 +35,8 @@ pub fn view(model: state.Model) -> Element(state.Msg) {
         state.AddConnection,
         state.SetConnectionCount,
         state.UserClickedPanic,
+        state.ToggleProbeInfo,
+        state.ProbeInfoKeyPressed,
       )
   }
 
@@ -47,7 +50,7 @@ pub fn view(model: state.Model) -> Element(state.Msg) {
       ],
       [text("Skip to Main Content")],
     ),
-    app_header.view(model.server_status),
+    app_header.view(model.server_status, model.github_stars),
     page,
   ])
 }

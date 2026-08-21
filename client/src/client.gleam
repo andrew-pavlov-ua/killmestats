@@ -1,5 +1,6 @@
 import gleam/option.{None}
 import lustre
+import lustre/effect
 import sysstats
 
 import app/state
@@ -26,6 +27,8 @@ fn init(_flags) {
       ram_history: [],
       server_status: state.Checking,
       terminal_lines: [],
+      probe_info_open: False,
+      github_stars: None,
       live_users: 0,
       connection_timed_out: False,
       socket: None,
@@ -33,6 +36,6 @@ fn init(_flags) {
       connections: [],
       next_connection_id: 0,
     ),
-    update.connect_websocket(0),
+    effect.batch([update.connect_websocket(0), update.load_github_stars()]),
   )
 }

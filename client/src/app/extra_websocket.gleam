@@ -1,11 +1,14 @@
 import app/state
 import config
+import ffi/timer
 import gleam/int
 import gleam/list
 import gleam/option.{None, Some}
 import gleam/uri.{Uri}
 import lustre/effect.{type Effect}
 import lustre_websocket as websocket
+
+const connection_start_interval_ms = 25
 
 pub fn set_connection_count(model: state.Model, value: String) {
   set_connection_count_at(model, value, load_websocket_url())
@@ -33,7 +36,8 @@ pub fn resize_connections(
   case current == target, current < target {
     True, _ -> #(model, effect.batch(effects))
     False, True -> {
-      let #(next_model, next_effect) = add_connection_at(model, url)
+      let delay = list.length(effects) * connection_start_interval_ms
+      let #(next_model, next_effect) = queue_connection_at(model, url, delay)
       resize_connections(next_model, target, [next_effect, ..effects], url)
     }
     False, False -> {
@@ -48,10 +52,28 @@ pub fn add_connection(model: state.Model) {
 }
 
 pub fn add_connection_at(model: state.Model, url: String) {
+  let #(model, id) = add_connecting_state(model)
+
+  case id {
+    None -> #(model, effect.none())
+    Some(id) -> open_extra_socket_at(model, id, url)
+  }
+}
+
+fn queue_connection_at(model: state.Model, url: String, delay: Int) {
+  let #(model, id) = add_connecting_state(model)
+
+  case id {
+    None -> #(model, effect.none())
+    Some(id) -> #(model, timer.after(delay, state.OpenExtraSocket(id, url)))
+  }
+}
+
+fn add_connecting_state(model: state.Model) {
   let total = list.length(model.connections)
 
   case total >= config.max_socket_connections() {
-    True -> #(model, effect.none())
+    True -> #(model, None)
     False -> {
       let id = model.next_connection_id
       #(
@@ -60,9 +82,27 @@ pub fn add_connection_at(model: state.Model, url: String) {
           connections: [state.Connecting(id), ..model.connections],
           next_connection_id: id + 1,
         ),
-        websocket.init(url, fn(event) { state.ExtraSocketEvent(id, event) }),
+        Some(id),
       )
     }
+  }
+}
+
+pub fn open_extra_socket_at(model: state.Model, id: Int, url: String) {
+  let is_pending =
+    list.any(model.connections, fn(connection) {
+      case connection {
+        state.Connecting(connection_id) -> connection_id == id
+        state.Connected(_, _) -> False
+      }
+    })
+
+  case is_pending {
+    False -> #(model, effect.none())
+    True -> #(
+      model,
+      websocket.init(url, fn(event) { state.ExtraSocketEvent(id, event) }),
+    )
   }
 }
 

@@ -7,7 +7,8 @@ import gleam/result
 import gleam/string
 import lustre/attribute
 import lustre/element.{type Element, text}
-import lustre/element/html.{button, div, h1, h2, input, main, p, span}
+import lustre/element/html.{button, code, div, h1, h2, input, main, p, pre, span}
+import lustre/element/svg
 import lustre/event
 import sysstats.{type SystemStats}
 import ui/charts
@@ -18,6 +19,7 @@ pub fn view(
   ram_history: List(Float),
   status: ServerStatus,
   terminal_lines: List(String),
+  probe_info_open: Bool,
   live_users: Int,
   connection_count: Int,
   connected_count: Int,
@@ -26,6 +28,8 @@ pub fn view(
   add_connection: msg,
   set_connection_count: fn(String) -> msg,
   panic_clicked: msg,
+  toggle_probe_info: msg,
+  probe_info_key_pressed: fn(String) -> msg,
 ) {
   let #(rounded_cpu_load, ram_usage) = case status {
     state.Alive -> #(
@@ -49,7 +53,7 @@ pub fn view(
       attribute.id("main-content"),
     ],
     [
-      div([], [
+      div([attribute.class("min-w-0")], [
         p(
           [
             attribute.class(
@@ -88,20 +92,17 @@ pub fn view(
             ),
           ],
         ),
-        button(
-          [
-            attribute.class(
-              "bg-gleam-yellow border-gleam-ink shadow-gleam mt-9 rounded-xl border-2 px-6 py-3.5 font-mono text-sm font-black uppercase tracking-wider transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gleam-ink focus-visible:ring-offset-4 active:translate-x-1 active:translate-y-1 active:shadow-none",
-            ),
-            event.on_click(panic_clicked),
-          ],
-          [text("Probe the System →")],
+        probe_controls(
+          probe_info_open,
+          panic_clicked,
+          toggle_probe_info,
+          probe_info_key_pressed,
         ),
       ]),
       div(
         [
           attribute.class(
-            "border-gleam-ink shadow-gleam relative rounded-card border-2 bg-white p-5 sm:p-7",
+            "border-gleam-ink shadow-gleam relative min-w-0 rounded-card border-2 bg-white p-5 sm:p-7",
           ),
         ],
         [
@@ -287,6 +288,142 @@ pub fn view(
           ),
         ],
       ),
+    ],
+  )
+}
+
+fn probe_controls(
+  info_open: Bool,
+  panic_clicked: msg,
+  toggle_info: msg,
+  info_key_pressed: fn(String) -> msg,
+) -> Element(msg) {
+  div([attribute.class("relative mt-9 max-w-xl")], [
+    div([attribute.class("flex flex-wrap items-center gap-3")], [
+      button(
+        [
+          attribute.class(
+            "bg-gleam-yellow border-gleam-ink shadow-gleam min-h-12 rounded-xl border-2 px-6 py-3.5 font-mono text-sm font-black uppercase tracking-wider transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gleam-ink focus-visible:ring-offset-4 active:translate-x-1 active:translate-y-1 active:shadow-none",
+          ),
+          event.on_click(panic_clicked),
+        ],
+        [text("Probe the System →")],
+      ),
+      button(
+        [
+          attribute.class(
+            "border-gleam-ink bg-gleam-cyan shadow-[3px_3px_0_rgb(47_41_51)] grid size-12 shrink-0 place-items-center rounded-xl border-2 text-gleam-ink transition-[background-color,box-shadow,transform] hover:-translate-y-0.5 hover:bg-gleam-pink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gleam-ink focus-visible:ring-offset-4 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none",
+          ),
+          attribute.aria_expanded(info_open),
+          attribute.aria_controls("probe-system-info"),
+          attribute.aria_label("About the system probe"),
+          attribute.title("About the system probe"),
+          event.on_click(toggle_info),
+          event.on_keydown(info_key_pressed),
+        ],
+        [
+          svg.svg(
+            [
+              attribute.class("size-5"),
+              attribute.attribute("viewBox", "0 0 24 24"),
+              attribute.attribute("fill", "none"),
+              attribute.attribute("stroke", "currentColor"),
+              attribute.attribute("stroke-width", "1.8"),
+              attribute.attribute("stroke-linecap", "round"),
+              attribute.attribute("stroke-linejoin", "round"),
+              attribute.aria_hidden(True),
+            ],
+            [
+              svg.circle([
+                attribute.attribute("cx", "12"),
+                attribute.attribute("cy", "12"),
+                attribute.attribute("r", "9"),
+              ]),
+              svg.path([attribute.attribute("d", "M12 11v5")]),
+              svg.path([attribute.attribute("d", "M12 8h.01")]),
+            ],
+          ),
+        ],
+      ),
+    ]),
+    case info_open {
+      False -> text("")
+      True -> probe_info(toggle_info, info_key_pressed)
+    },
+  ])
+}
+
+fn probe_info(close: msg, key_pressed: fn(String) -> msg) -> Element(msg) {
+  div(
+    [
+      attribute.id("probe-system-info"),
+      attribute.class(
+        "border-gleam-ink/25 absolute left-0 top-full z-[100] mt-3 min-w-0 w-[min(30rem,calc(100vw-3rem))] overflow-hidden rounded-2xl border bg-white shadow-[0_24px_70px_rgb(47_41_51/0.22)]",
+      ),
+      attribute.attribute("role", "region"),
+      attribute.attribute("aria-labelledby", "probe-system-info-title"),
+      event.on_keydown(key_pressed),
+    ],
+    [
+      div([attribute.class("p-5")], [
+        div([attribute.class("flex items-start justify-between gap-4")], [
+          div([], [
+            p(
+              [
+                attribute.class(
+                  "font-mono text-[0.7rem] font-bold uppercase tracking-[0.18em] opacity-50",
+                ),
+              ],
+              [text("POST /api/panic")],
+            ),
+            h2(
+              [
+                attribute.id("probe-system-info-title"),
+                attribute.class(
+                  "mt-1 text-balance text-xl font-black tracking-[-0.035em]",
+                ),
+              ],
+              [text("What Happens?")],
+            ),
+          ]),
+          button(
+            [
+              attribute.class(
+                "grid size-11 shrink-0 place-items-center rounded-full text-2xl leading-none opacity-55 transition-[background-color,opacity] hover:bg-gleam-cream hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gleam-ink focus-visible:ring-offset-2",
+              ),
+              attribute.aria_label("Close probe information"),
+              event.on_click(close),
+            ],
+            [span([attribute.aria_hidden(True)], [text("×")])],
+          ),
+        ]),
+        p([attribute.class("mt-3 text-pretty font-medium leading-relaxed")], [
+          text(
+            "The handler calls panic, so Wisp returns 500 for that request. The server keeps running and accepts the next one.",
+          ),
+        ]),
+        p(
+          [
+            attribute.class("mt-3 font-mono text-xs font-bold opacity-65"),
+          ],
+          [text("Expected: 500 Internal Server Error")],
+        ),
+        pre(
+          [
+            attribute.class(
+              "border-gleam-ink/30 mt-4 max-w-full overflow-x-auto rounded-xl border bg-gleam-ink p-4 font-mono text-xs leading-5 text-white",
+            ),
+            attribute.attribute("translate", "no"),
+          ],
+          [
+            code([], [
+              text(
+                "fn panic_program() {\n  log.info(\"Triggering intentional panic\")\n  panic\n}",
+              ),
+            ]),
+          ],
+        ),
+      ]),
     ],
   )
 }

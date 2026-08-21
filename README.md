@@ -1,16 +1,15 @@
-# Gleam System Stats
+# killmestats
 
-A Gleam dashboard for the host's CPU and RAM usage. The server runs on
-Erlang/OTP with Wisp and Mist. The browser client uses Lustre and Chart.js.
+A small Gleam dashboard for watching a host's CPU and RAM usage. The server
+runs on Erlang/OTP with Wisp and Mist; the browser client uses Lustre and
+Chart.js.
 
 ## Project layout
 
-- `server/` exposes the HTTP API and WebSocket, samples once an hour, and keeps
-  the latest 24 hours in ETS and PostgreSQL.
-- `client/` receives live statistics and renders the dashboard with Lustre and
-  Chart.js.
-- `shared/` contains the statistics and WebSocket payload types used by both
-  applications.
+- `server/` serves the API and WebSockets and keeps 24 hours of hourly samples
+  in ETS and PostgreSQL.
+- `client/` renders live and historical statistics.
+- `shared/` contains the types used by both applications.
 
 The server uses Erlang's `os_mon` application through a small Erlang foreign
 function interface in `server/src/system_stats/stats.erl`.
@@ -45,29 +44,29 @@ gleam run -m lustre/dev start
 Open `http://localhost:1234` in a browser. The client connects directly to
 `ws://localhost:8000/api/ws` during local development.
 
-The initial connection is shown as `Checking`. If it cannot open within four
-seconds, the UI reports the server as unreachable. Closed connections are
-retried every 250 milliseconds and a successful connection returns the status
-to `Alive`.
+The UI reports the server as unreachable if the initial connection cannot open
+within four seconds. Closed connections are retried every 250 milliseconds.
 
 ## Client configuration
 
-Local development connects directly to `http://localhost:8000`. The production
-client uses same-origin `/api` requests, which host Nginx proxies to the server
-on `127.0.0.1:8000`. The default extra WebSocket connection limit is 500. These
-defaults are defined in `client/src/config.gleam`; no production `.env`
-file is required for the client.
+Local development connects directly to `http://localhost:8000`. In production,
+the client uses same-origin `/api` requests and Nginx proxies them to
+`127.0.0.1:8000`. These defaults live in `client/src/config.gleam`; the static
+client does not need a production `.env` file.
 
-The application limit does not override limits imposed by the browser or
-operating system.
+The load control allows up to 500 extra WebSockets. New connections are opened
+25 milliseconds apart so a large batch does not block the main connection.
+Browser and operating-system limits still apply.
+
+The GitHub badge requests the repository's star count once when the client
+starts. It falls back to a plain `Star` label if the request fails.
 
 ## WebSocket protocol
 
-Connect to `GET /api/ws` using a WebSocket upgrade. The primary client sends
-`client_stats` once after connecting. The server sends an initial snapshot,
-then broadcasts a fresh snapshot every second. A separate
-`/api/load` WebSocket endpoint accepts the extra load-test connections without
-sending statistics to each one.
+The primary client connects to `GET /api/ws` and sends `client_stats` once. The
+server replies with an initial snapshot and broadcasts fresh statistics every
+second. Extra load-test connections use `/api/load` and do not receive those
+broadcasts.
 
 An hourly sampler records chart history even when no browser is connected.
 Samples older than 24 hours are removed, and history is ordered from oldest to
@@ -98,17 +97,15 @@ newest:
 }
 ```
 
-Binary frames and unknown text commands are ignored. WebSocket routing happens
-in Mist before ordinary requests are converted to Wisp requests because the
-upgrade requires Mist's original connection value.
+Binary frames and unknown text commands are ignored. Mist handles the upgrade
+before ordinary requests are passed to Wisp.
 
 ## API
 
 ### `GET /api/stats`
 
-HTTP fallback for diagnostics and clients that cannot use WebSockets. It
-returns CPU and RAM utilization as percentages in the `0.0` to `100.0` range,
-along with used and total RAM in bytes:
+Returns CPU and RAM utilization as percentages, plus used and total RAM in
+bytes:
 
 ```json
 {
@@ -119,14 +116,13 @@ along with used and total RAM in bytes:
 }
 ```
 
-CPU utilization comes from `cpu_sup`. RAM utilization is calculated from the
-total and available system memory reported by `memsup`.
+CPU utilization comes from `cpu_sup`; RAM values come from `memsup`.
 
-A reported CPU value of `0.0` can be legitimate when the machine is idle, so it
-does not produce a warning by itself. Failures returned by `os_mon`/`cpu_sup`
-are logged by the Erlang adapter. A RAM value of `0.0` may indicate that
-`os_mon`/`memsup` was unavailable or could not read the operating system's
-memory information, and the server writes a warning for that value.
+### `POST /api/panic`
+
+Deliberately panics inside the request handler. Wisp catches the panic and
+returns `500 Internal Server Error`; the server process stays up. The dashboard's
+`Probe the System` button calls this endpoint.
 
 ## Development checks
 
@@ -137,9 +133,6 @@ gleam format --check src test
 gleam check
 gleam test
 ```
-
-The current development configuration expects the client at
-`http://localhost:1234` and the API at `http://localhost:8000`.
 
 GitHub Actions runs these checks for `shared`, `server`, and `client` on pushes
 to `master` or `main`, and on pull requests.
@@ -158,9 +151,8 @@ Build the client and copy the contents of `client/dist` to `/var/www/html`:
 make client-deploy
 ```
 
-`client-build` only creates the static files. `client-deploy` runs that build
-and then copies `client/dist/.` with `sudo`, preserving dotfiles and copying the
-directory contents rather than nesting a `dist` directory under the web root.
+`client-build` only creates the static files. `client-deploy` also copies
+`client/dist/.` to the web root.
 
 Install the project Nginx configuration the first time, or whenever
 `client/nginx.conf` changes:
@@ -170,12 +162,8 @@ make nginx-install
 ```
 
 `nginx-install` replaces the Debian/Ubuntu default site, checks the
-configuration, and reloads Nginx. Nginx serves `/var/www/html` and proxies the
-entire `/api/` namespace to `127.0.0.1:8000`. The same location supports normal
-HTTP requests and WebSocket upgrades.
-
-Open the host running Nginx in a browser. Port 8080 is no longer used by the
-frontend.
+configuration, and reloads Nginx. Nginx serves `/var/www/html` and proxies
+`/api/` requests and WebSocket upgrades to `127.0.0.1:8000`.
 
 For later updates, rebuild only the part that changed:
 
@@ -187,8 +175,7 @@ docker compose up -d --build server
 make client-deploy
 ```
 
-After a successful `test` workflow on `master`, the `deploy` workflow performs
-both commands on a Linux self-hosted runner. The runner host must have Docker,
-Docker Compose, Nginx, and passwordless permission for the `sudo cp` used by
-`make client-deploy`. The workflow targets an Ubuntu 22 compatible Erlang build
-through `ImageOS: ubuntu22`; the host itself may be Debian.
+After a successful `test` workflow on `master`, the `deploy` workflow runs both
+commands on a Linux self-hosted runner. The host needs Docker, Docker Compose,
+Nginx, and passwordless permission for the `sudo cp` used by
+`make client-deploy`.

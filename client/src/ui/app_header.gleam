@@ -1,9 +1,13 @@
 import app/state.{type ServerStatus}
+import gleam/int
+import gleam/option.{type Option, None, Some}
 import lustre/attribute
 import lustre/element.{type Element, text}
-import lustre/element/html.{div, header, span}
+import lustre/element/html.{a, div, header, img, span}
 
-pub fn view(status: ServerStatus) -> Element(msg) {
+const repository_url = "https://github.com/andrew-pavlov-ua/killmestats"
+
+pub fn view(status: ServerStatus, stars: Option(Int)) -> Element(msg) {
   header(
     [
       attribute.class(
@@ -21,11 +25,77 @@ pub fn view(status: ServerStatus) -> Element(msg) {
           ],
           [text("G")],
         ),
-        span([attribute.class("text-lg font-black tracking-tight")], [
-          text("killmestats"),
-        ]),
+        span(
+          [
+            attribute.class(
+              "hidden text-lg font-black tracking-tight sm:inline",
+            ),
+          ],
+          [text("killmestats")],
+        ),
       ]),
-      status_indicator(status),
+      div([attribute.class("flex items-center gap-2 sm:gap-3")], [
+        github_badge(stars),
+        status_indicator(status),
+      ]),
+    ],
+  )
+}
+
+fn github_badge(stars: Option(Int)) -> Element(msg) {
+  let #(count, label) = case stars {
+    Some(count) -> #(
+      int.to_string(count),
+      "View killmestats on GitHub, "
+        <> int.to_string(count)
+        <> case count == 1 {
+        True -> " star"
+        False -> " stars"
+      },
+    )
+    None -> #("Star", "Star killmestats on GitHub")
+  }
+
+  a(
+    [
+      attribute.href(repository_url),
+      attribute.class(
+        "border-gleam-ink shadow-[2px_2px_0_rgb(47_41_51)] inline-flex min-h-10 items-stretch overflow-hidden rounded-lg border-2 bg-white font-mono text-xs font-black transition-[transform,box-shadow,background-color] hover:-translate-y-0.5 hover:bg-gleam-pink/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gleam-ink focus-visible:ring-offset-2 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none",
+      ),
+      attribute.aria_label(label),
+      attribute.attribute("translate", "no"),
+    ],
+    [
+      span([attribute.class("flex items-center gap-2 px-2.5 sm:px-3")], [
+        img([
+          attribute.src("/github-invertocat.png"),
+          attribute.alt(""),
+          attribute.class("size-4 shrink-0 object-contain"),
+          attribute.attribute("width", "16"),
+          attribute.attribute("height", "16"),
+          attribute.aria_hidden(True),
+        ]),
+        span([attribute.class("hidden sm:inline")], [text("GitHub")]),
+      ]),
+      span(
+        [
+          attribute.class(
+            "border-gleam-ink flex min-w-10 items-center justify-center gap-1 border-l-2 bg-gleam-yellow px-2 tabular-nums",
+          ),
+          attribute.aria_live("polite"),
+          attribute.aria_atomic(True),
+        ],
+        [
+          span(
+            [
+              attribute.class("text-lg leading-none"),
+              attribute.aria_hidden(True),
+            ],
+            [text("★")],
+          ),
+          text(count),
+        ],
+      ),
     ],
   )
 }

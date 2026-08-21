@@ -3,6 +3,7 @@ import api/error
 import app/extra_websocket as su
 import app/state
 import data
+import ffi/github
 import ffi/timer
 import gleam/io
 import gleam/json
@@ -30,6 +31,23 @@ pub fn update(
     state.AddConnection -> su.add_connection(model)
     state.RemoveConnection -> su.remove_connection(model)
     state.SetConnectionCount(value) -> su.set_connection_count(model, value)
+    state.ToggleProbeInfo -> #(
+      state.Model(..model, probe_info_open: !model.probe_info_open),
+      effect.none(),
+    )
+    state.ProbeInfoKeyPressed("Escape") -> #(
+      state.Model(..model, probe_info_open: False),
+      effect.none(),
+    )
+    state.ProbeInfoKeyPressed(_) -> #(model, effect.none())
+    state.GitHubStarsLoaded(count) -> #(
+      state.Model(..model, github_stars: case count >= 0 {
+        True -> Some(count)
+        False -> None
+      }),
+      effect.none(),
+    )
+    state.OpenExtraSocket(id, url) -> su.open_extra_socket_at(model, id, url)
     state.ExtraSocketEvent(id, event) ->
       su.update_extra_socket(model, id, event)
     // Events from an earlier connection attempt must not replace the active socket.
@@ -185,6 +203,12 @@ pub fn connect_websocket(id: Int) -> Effect(state.Msg) {
     }),
     timer.after(connection_timeout_ms, state.ConnectionTimedOut(id)),
   ])
+}
+
+pub fn load_github_stars() -> Effect(state.Msg) {
+  effect.from(fn(dispatch) {
+    github.load_stars(fn(count) { dispatch(state.GitHubStarsLoaded(count)) })
+  })
 }
 
 fn schedule_reconnect(id: Int) -> Effect(state.Msg) {
