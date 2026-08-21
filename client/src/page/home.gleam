@@ -330,20 +330,36 @@ fn connection_controls(
           attribute.class("p-4 sm:p-5"),
         ],
         [
-          div([], [
-            p(
-              [
-                attribute.class(
-                  "font-mono text-xs font-black uppercase tracking-[0.2em] opacity-60",
+          div(
+            [
+              attribute.class(
+                "border-gleam-ink/20 flex items-center justify-between gap-4 rounded-xl border bg-white/60 px-3 py-2.5",
+              ),
+            ],
+            [
+              div([attribute.class("flex min-w-0 items-center gap-2.5")], [
+                span(
+                  [
+                    attribute.class(
+                      "bg-gleam-cyan border-gleam-ink size-2.5 shrink-0 rounded-full border",
+                    ),
+                    attribute.attribute("aria-hidden", "true"),
+                  ],
+                  [],
                 ),
-              ],
-              [text("/// client live users")],
-            ),
-            div([attribute.class("mt-2 flex items-center gap-3")], [
+                p(
+                  [
+                    attribute.class(
+                      "truncate font-mono text-xs font-black uppercase tracking-widest",
+                    ),
+                  ],
+                  [text("Client Live Users")],
+                ),
+              ]),
               p(
                 [
                   attribute.class(
-                    "text-5xl font-black leading-none tracking-[-0.07em] tabular-nums",
+                    "shrink-0 text-2xl font-black leading-none tracking-[-0.05em] tabular-nums",
                   ),
                   attribute.attribute("role", "status"),
                   attribute.attribute("aria-live", "polite"),
@@ -355,40 +371,11 @@ fn connection_controls(
                 ],
                 [text(int.to_string(live_users))],
               ),
-              div([], [
-                p(
-                  [
-                    attribute.class(
-                      "flex items-center gap-2 font-mono text-xs font-black uppercase tracking-widest",
-                    ),
-                  ],
-                  [
-                    span(
-                      [
-                        attribute.class(
-                          "bg-gleam-cyan border-gleam-ink size-2.5 rounded-full border shadow-[0_0_0_3px_rgb(166_240_252/0.35)]",
-                        ),
-                        attribute.attribute("aria-hidden", "true"),
-                      ],
-                      [],
-                    ),
-                    text("Online Now"),
-                  ],
-                ),
-                p(
-                  [
-                    attribute.class(
-                      "mt-1 font-mono text-xs font-semibold opacity-55 tabular-nums",
-                    ),
-                  ],
-                  [text("browser clients connected")],
-                ),
-              ]),
-            ]),
-          ]),
+            ],
+          ),
           div(
             [
-              attribute.class("border-gleam-ink/20 mt-4 border-t pt-4"),
+              attribute.class("mt-5"),
             ],
             [
               p(
@@ -459,7 +446,7 @@ fn connection_controls(
                   div(
                     [
                       attribute.class(
-                        "border-gleam-ink/20 flex items-center justify-between gap-2 rounded-xl border bg-white p-2 sm:shrink-0",
+                        "border-gleam-ink/20 flex items-center justify-between gap-2 rounded-xl border bg-white p-1.5 sm:shrink-0",
                       ),
                       attribute.attribute("role", "group"),
                       attribute.attribute(
@@ -471,7 +458,7 @@ fn connection_controls(
                       button(
                         [
                           attribute.class(
-                            "border-gleam-ink grid size-10 place-items-center rounded-lg border-2 bg-white font-mono text-xl font-black transition-[transform,background-color] hover:bg-gleam-yellow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gleam-ink focus-visible:ring-offset-2 active:scale-95 disabled:cursor-not-allowed disabled:opacity-30",
+                            "border-gleam-ink grid size-9 place-items-center rounded-lg border-2 bg-white font-mono text-xl font-black transition-[transform,background-color] hover:bg-gleam-yellow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gleam-ink focus-visible:ring-offset-2 active:scale-95 disabled:cursor-not-allowed disabled:opacity-30",
                           ),
                           attribute.disabled(count <= 0),
                           attribute.attribute(
@@ -512,7 +499,7 @@ fn connection_controls(
                       button(
                         [
                           attribute.class(
-                            "border-gleam-ink bg-gleam-cyan grid size-10 place-items-center rounded-lg border-2 font-mono text-xl font-black transition-[transform,background-color] hover:bg-gleam-yellow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gleam-ink focus-visible:ring-offset-2 active:scale-95 disabled:cursor-not-allowed disabled:opacity-30",
+                            "border-gleam-ink bg-gleam-cyan grid size-9 place-items-center rounded-lg border-2 font-mono text-xl font-black transition-[transform,background-color] hover:bg-gleam-yellow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gleam-ink focus-visible:ring-offset-2 active:scale-95 disabled:cursor-not-allowed disabled:opacity-30",
                           ),
                           attribute.disabled(count >= max_connections),
                           attribute.attribute(
