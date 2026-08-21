@@ -123,11 +123,11 @@ fn status_indicator(status: ServerStatus) -> Element(msg) {
 fn status_badge_class(status: ServerStatus) -> String {
   case status {
     state.Alive ->
-      "border-gleam-ink/20 bg-white/50 flex items-center gap-2 rounded-full border px-3 py-1.5 font-mono text-xs font-bold uppercase tracking-widest"
+      "border-gleam-ink shadow-[2px_2px_0_rgb(47_41_51)] inline-flex min-h-10 items-center gap-2 rounded-lg border-2 bg-white px-3 font-mono text-xs font-black uppercase tracking-widest"
     state.Checking ->
-      "border-gleam-ink bg-gleam-yellow flex items-center gap-2 rounded-full border px-3 py-1.5 font-mono text-xs font-bold uppercase tracking-widest"
+      "border-gleam-ink shadow-[2px_2px_0_rgb(47_41_51)] inline-flex min-h-10 items-center gap-2 rounded-lg border-2 bg-gleam-yellow px-3 font-mono text-xs font-black uppercase tracking-widest"
     state.ServerUnreachable(_) ->
-      "border-gleam-ink bg-red-100 flex items-center gap-2 rounded-full border px-3 py-1.5 font-mono text-xs font-bold uppercase tracking-widest"
+      "border-gleam-ink shadow-[2px_2px_0_rgb(47_41_51)] inline-flex min-h-10 items-center gap-2 rounded-lg border-2 bg-red-100 px-3 font-mono text-xs font-black uppercase tracking-widest"
   }
 }
 

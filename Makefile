@@ -23,7 +23,7 @@ nginx-install:
 	sudo systemctl reload nginx
 
 server-run:
-	cd server && gleam run
+	cd server && POSTGRES_HOST=127.0.0.1 gleam run
 
 format:
 	cd server && gleam format
