@@ -2,6 +2,7 @@ import cache
 import db/postgres
 import gleam/erlang/process
 import gleam/option
+import live_users
 import log
 import mist
 import router
@@ -20,11 +21,14 @@ pub fn main() -> Nil {
   let context = cache.Context(table, db)
 
   stats_sampler.start(context)
+  let live_user_counter = live_users.start()
 
   let http_handler = wisp_mist.handler(router.handle_request, secret_key_base)
 
   // WebSocket upgrades need Mist's connection value before Wisp consumes the request.
-  let handler = fn(request) { websocket.handle(request, http_handler, context) }
+  let handler = fn(request) {
+    websocket.handle(request, http_handler, context, live_user_counter)
+  }
 
   let assert Ok(_) =
     handler

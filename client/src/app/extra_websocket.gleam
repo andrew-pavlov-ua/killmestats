@@ -21,7 +21,7 @@ pub fn set_connection_count_at(model: state.Model, value: String, url: String) {
     Error(_) -> #(model, effect.none())
     Ok(requested) -> {
       let target =
-        int.clamp(requested, min: 1, max: config.max_socket_connections())
+        int.clamp(requested, min: 0, max: config.max_socket_connections())
       resize_connections(model, target, [], url)
     }
   }
@@ -33,8 +33,7 @@ pub fn resize_connections(
   effects: List(Effect(state.Msg)),
   url: String,
 ) {
-  // The primary stats socket is always present in the number shown to the user.
-  let current = list.length(model.connections) + 1
+  let current = list.length(model.connections)
 
   case current == target, current < target {
     True, _ -> #(model, effect.batch(effects))
@@ -54,7 +53,7 @@ pub fn add_connection(model: state.Model) {
 }
 
 pub fn add_connection_at(model: state.Model, url: String) {
-  let total = list.length(model.connections) + 1
+  let total = list.length(model.connections)
 
   case total >= config.max_socket_connections() {
     True -> #(model, effect.none())

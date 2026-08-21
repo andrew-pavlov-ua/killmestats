@@ -1,6 +1,5 @@
 import config
 import gleam/list
-import gleam/option
 import lustre/element.{type Element, text}
 import page/home
 import ui/app_header
@@ -18,10 +17,6 @@ pub fn view(model: state.Model) -> Element(state.Msg) {
         state.Connecting(_) -> False
       }
     })
-    + case model.socket {
-      option.Some(_) -> 1
-      option.None -> 0
-    }
 
   let page = case model.page {
     state.Home ->
@@ -31,7 +26,8 @@ pub fn view(model: state.Model) -> Element(state.Msg) {
         model.ram_history,
         model.server_status,
         model.terminal_lines,
-        list.length(model.connections) + 1,
+        model.live_users,
+        list.length(model.connections),
         connected_count,
         config.max_socket_connections(),
         state.RemoveConnection,

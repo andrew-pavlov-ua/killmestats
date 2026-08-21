@@ -27,7 +27,7 @@ pub fn ram_usage_can_be_forced_to_gibibytes_test() {
 }
 
 pub fn default_connection_limit_test() {
-  assert config.max_socket_connections() == 1000
+  assert config.max_socket_connections() == 500
 }
 
 pub fn add_connection_prepends_new_connection_test() {
@@ -38,7 +38,7 @@ pub fn add_connection_prepends_new_connection_test() {
   assert updated.next_connection_id == 9
 }
 
-pub fn remove_connection_keeps_primary_when_no_extras_exist_test() {
+pub fn remove_connection_does_nothing_when_no_extras_exist_test() {
   let model = model_with_connections([], 0)
   let #(updated, _) = extra_websocket.remove_connection(model)
 
@@ -51,11 +51,11 @@ pub fn set_connection_count_grows_to_requested_total_test() {
   let #(updated, _) =
     extra_websocket.set_connection_count_at(model, "4", "/api/ws")
 
-  assert list.length(updated.connections) == 3
-  assert updated.next_connection_id == 3
+  assert list.length(updated.connections) == 4
+  assert updated.next_connection_id == 4
 }
 
-pub fn set_connection_count_clamps_to_one_test() {
+pub fn set_connection_count_allows_zero_test() {
   let model =
     model_with_connections(
       [state.Connecting(3), state.Connecting(2), state.Connecting(1)],
@@ -135,6 +135,7 @@ fn base_model() -> state.Model {
     ram_history: [],
     server_status: state.Checking,
     terminal_lines: [],
+    live_users: 0,
     connection_timed_out: False,
     socket: None,
     primary_connection_id: 0,

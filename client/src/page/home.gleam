@@ -18,6 +18,7 @@ pub fn view(
   ram_history: List(Float),
   status: ServerStatus,
   terminal_lines: List(String),
+  live_users: Int,
   connection_count: Int,
   connected_count: Int,
   max_connections: Int,
@@ -169,6 +170,7 @@ pub fn view(
             [text(status_detail(status))],
           ),
           connection_controls(
+            live_users,
             connection_count,
             connected_count,
             max_connections,
@@ -298,6 +300,7 @@ fn history_chart(status: ServerStatus) -> Element(msg) {
 }
 
 fn connection_controls(
+  live_users: Int,
   count: Int,
   connected_count: Int,
   max_connections: Int,
@@ -308,80 +311,237 @@ fn connection_controls(
   div(
     [
       attribute.class(
-        "border-gleam-ink/20 mt-6 flex items-center justify-between rounded-xl border bg-gleam-cream/40 p-2",
+        "border-gleam-ink shadow-gleam relative mt-6 overflow-hidden rounded-2xl border-2 bg-gleam-cream",
       ),
     ],
     [
-      button(
+      div(
         [
-          attribute.class(
-            "border-gleam-ink grid size-10 place-items-center rounded-lg border-2 bg-white font-mono text-xl font-black transition-[transform,background-color] hover:bg-gleam-yellow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gleam-ink focus-visible:ring-offset-2 active:scale-95 disabled:cursor-not-allowed disabled:opacity-30",
-          ),
-          attribute.disabled(count <= 1),
-          attribute.attribute("aria-label", "Remove WebSocket connection"),
-          event.on_click(remove_connection),
+          attribute.class("border-gleam-ink/20 flex h-2 border-b"),
+          attribute.attribute("aria-hidden", "true"),
         ],
-        [text("−")],
+        [
+          span([attribute.class("w-2/3 bg-gleam-cyan")], []),
+          span([attribute.class("w-1/3 bg-gleam-pink")], []),
+        ],
       ),
-      div([attribute.class("text-center font-mono")], [
-        input([
-          attribute.class(
-            "w-16 rounded-md bg-transparent text-center text-lg font-black tabular-nums [appearance:textfield] focus-visible:ring-2 focus-visible:ring-gleam-ink focus-visible:ring-offset-2 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
-          ),
-          attribute.type_("number"),
-          attribute.inputmode("numeric"),
-          attribute.name("connection-count"),
-          attribute.autocomplete("off"),
-          attribute.min("1"),
-          attribute.max(int.to_string(max_connections)),
-          attribute.value(int.to_string(count)),
-          attribute.attribute("aria-label", "WebSocket connection count"),
-          event.on_change(set_connection_count),
-        ]),
-        p(
-          [
-            attribute.class(
-              "text-[0.65rem] font-bold uppercase tracking-widest opacity-60",
-            ),
-          ],
-          [text("connections")],
-        ),
-        p(
-          [
-            attribute.class(
-              "border-gleam-ink/20 mt-1.5 inline-flex items-center gap-1.5 rounded-full border bg-white px-2 py-0.5 text-[0.65rem] font-bold tracking-wide text-gleam-ink shadow-sm tabular-nums",
-            ),
-            attribute.attribute("role", "status"),
-            attribute.attribute("aria-live", "polite"),
-            attribute.attribute("aria-atomic", "true"),
-          ],
-          [
-            span(
+      div(
+        [
+          attribute.class("p-4 sm:p-5"),
+        ],
+        [
+          div([], [
+            p(
               [
                 attribute.class(
-                  "size-1.5 rounded-full bg-gleam-cyan ring-1 ring-gleam-ink/30",
+                  "font-mono text-xs font-black uppercase tracking-[0.2em] opacity-60",
                 ),
-                attribute.attribute("aria-hidden", "true"),
               ],
-              [],
+              [text("/// client live users")],
             ),
-            text(int.to_string(connected_count) <> " connected"),
-          ],
-        ),
-      ]),
-      button(
-        [
-          attribute.class(
-            "border-gleam-ink bg-gleam-cyan grid size-10 place-items-center rounded-lg border-2 font-mono text-xl font-black transition-[transform,background-color] hover:bg-gleam-yellow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gleam-ink focus-visible:ring-offset-2 active:scale-95 disabled:cursor-not-allowed disabled:opacity-30",
+            div([attribute.class("mt-2 flex items-center gap-3")], [
+              p(
+                [
+                  attribute.class(
+                    "text-5xl font-black leading-none tracking-[-0.07em] tabular-nums",
+                  ),
+                  attribute.attribute("role", "status"),
+                  attribute.attribute("aria-live", "polite"),
+                  attribute.attribute("aria-atomic", "true"),
+                  attribute.attribute(
+                    "aria-label",
+                    int.to_string(live_users) <> " client users online",
+                  ),
+                ],
+                [text(int.to_string(live_users))],
+              ),
+              div([], [
+                p(
+                  [
+                    attribute.class(
+                      "flex items-center gap-2 font-mono text-xs font-black uppercase tracking-widest",
+                    ),
+                  ],
+                  [
+                    span(
+                      [
+                        attribute.class(
+                          "bg-gleam-cyan border-gleam-ink size-2.5 rounded-full border shadow-[0_0_0_3px_rgb(166_240_252/0.35)]",
+                        ),
+                        attribute.attribute("aria-hidden", "true"),
+                      ],
+                      [],
+                    ),
+                    text("Online Now"),
+                  ],
+                ),
+                p(
+                  [
+                    attribute.class(
+                      "mt-1 font-mono text-xs font-semibold opacity-55 tabular-nums",
+                    ),
+                  ],
+                  [text("browser clients connected")],
+                ),
+              ]),
+            ]),
+          ]),
+          div(
+            [
+              attribute.class("border-gleam-ink/20 mt-4 border-t pt-4"),
+            ],
+            [
+              p(
+                [
+                  attribute.class(
+                    "font-mono text-xs font-black uppercase tracking-[0.2em] opacity-60",
+                  ),
+                ],
+                [text("/// extra connections")],
+              ),
+              div(
+                [
+                  attribute.class(
+                    "mt-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between",
+                  ),
+                ],
+                [
+                  div([attribute.class("flex items-center gap-3")], [
+                    p(
+                      [
+                        attribute.class(
+                          "text-5xl font-black leading-none tracking-[-0.07em] tabular-nums",
+                        ),
+                        attribute.attribute("role", "status"),
+                        attribute.attribute("aria-live", "polite"),
+                        attribute.attribute("aria-atomic", "true"),
+                        attribute.attribute(
+                          "aria-label",
+                          int.to_string(connected_count)
+                            <> " of "
+                            <> int.to_string(count)
+                            <> " extra connections connected",
+                        ),
+                      ],
+                      [text(int.to_string(connected_count))],
+                    ),
+                    div([], [
+                      p(
+                        [
+                          attribute.class(
+                            "flex items-center gap-2 font-mono text-xs font-black uppercase tracking-widest",
+                          ),
+                        ],
+                        [
+                          span(
+                            [
+                              attribute.class(connection_dot_class(
+                                connected_count,
+                                count,
+                              )),
+                              attribute.attribute("aria-hidden", "true"),
+                            ],
+                            [],
+                          ),
+                          text("Connected Now"),
+                        ],
+                      ),
+                      p(
+                        [
+                          attribute.class(
+                            "mt-1 font-mono text-xs font-semibold opacity-55 tabular-nums",
+                          ),
+                        ],
+                        [text("of " <> int.to_string(count) <> " requested")],
+                      ),
+                    ]),
+                  ]),
+                  div(
+                    [
+                      attribute.class(
+                        "border-gleam-ink/20 flex items-center justify-between gap-2 rounded-xl border bg-white p-2 sm:shrink-0",
+                      ),
+                      attribute.attribute("role", "group"),
+                      attribute.attribute(
+                        "aria-label",
+                        "Requested extra connections",
+                      ),
+                    ],
+                    [
+                      button(
+                        [
+                          attribute.class(
+                            "border-gleam-ink grid size-10 place-items-center rounded-lg border-2 bg-white font-mono text-xl font-black transition-[transform,background-color] hover:bg-gleam-yellow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gleam-ink focus-visible:ring-offset-2 active:scale-95 disabled:cursor-not-allowed disabled:opacity-30",
+                          ),
+                          attribute.disabled(count <= 0),
+                          attribute.attribute(
+                            "aria-label",
+                            "Remove extra WebSocket connection",
+                          ),
+                          event.on_click(remove_connection),
+                        ],
+                        [text("−")],
+                      ),
+                      div([attribute.class("text-center font-mono")], [
+                        input([
+                          attribute.class(
+                            "w-16 rounded-md bg-transparent text-center text-lg font-black tabular-nums [appearance:textfield] focus-visible:ring-2 focus-visible:ring-gleam-ink focus-visible:ring-offset-2 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+                          ),
+                          attribute.type_("number"),
+                          attribute.inputmode("numeric"),
+                          attribute.name("extra-connection-count"),
+                          attribute.autocomplete("off"),
+                          attribute.min("0"),
+                          attribute.max(int.to_string(max_connections)),
+                          attribute.value(int.to_string(count)),
+                          attribute.attribute(
+                            "aria-label",
+                            "Requested extra WebSocket connections",
+                          ),
+                          event.on_change(set_connection_count),
+                        ]),
+                        p(
+                          [
+                            attribute.class(
+                              "text-[0.65rem] font-bold uppercase tracking-widest opacity-60",
+                            ),
+                          ],
+                          [text("requested")],
+                        ),
+                      ]),
+                      button(
+                        [
+                          attribute.class(
+                            "border-gleam-ink bg-gleam-cyan grid size-10 place-items-center rounded-lg border-2 font-mono text-xl font-black transition-[transform,background-color] hover:bg-gleam-yellow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gleam-ink focus-visible:ring-offset-2 active:scale-95 disabled:cursor-not-allowed disabled:opacity-30",
+                          ),
+                          attribute.disabled(count >= max_connections),
+                          attribute.attribute(
+                            "aria-label",
+                            "Add extra WebSocket connection",
+                          ),
+                          event.on_click(add_connection),
+                        ],
+                        [text("+")],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
           ),
-          attribute.disabled(count >= max_connections),
-          attribute.attribute("aria-label", "Add WebSocket connection"),
-          event.on_click(add_connection),
         ],
-        [text("+")],
       ),
     ],
   )
+}
+
+fn connection_dot_class(connected_count: Int, requested_count: Int) -> String {
+  case connected_count == requested_count {
+    True ->
+      "bg-gleam-cyan border-gleam-ink size-2.5 rounded-full border shadow-[0_0_0_3px_rgb(166_240_252/0.35)]"
+    False ->
+      "bg-gleam-yellow border-gleam-ink size-2.5 rounded-full border shadow-[0_0_0_3px_rgb(247_213_111/0.35)]"
+  }
 }
 
 fn terminal(lines: List(String)) {

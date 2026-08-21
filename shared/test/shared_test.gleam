@@ -16,9 +16,13 @@ pub fn data_json_round_trip_test() {
       ram_total_bytes: 17_179_869_184,
     )
   let payload =
-    data.Data(latest_stats: stats, time_stats_list: [
-      data.TimeStats(timestamp_ms: 1_700_000_000_000, stats:),
-    ])
+    data.Data(
+      latest_stats: stats,
+      time_stats_list: [
+        data.TimeStats(timestamp_ms: 1_700_000_000_000, stats:),
+      ],
+      live_users: 7,
+    )
 
   let encoded = payload |> data.to_json |> json.to_string
   let assert Ok(decoded) = json.parse(encoded, data.decoder())

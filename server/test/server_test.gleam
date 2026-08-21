@@ -10,6 +10,7 @@ import gleam/time/duration
 import gleam/time/timestamp
 import gleeunit
 import gleeunit/should
+import live_users
 import router
 import sysstats
 import system_stats/stats
@@ -31,6 +32,20 @@ pub fn system_stats_are_percentages_test() {
   should.be_true(system_stats.cpu_load <=. 100.0)
   should.be_true(system_stats.ram_load >=. 0.0)
   should.be_true(system_stats.ram_load <=. 100.0)
+}
+
+pub fn live_user_counter_tracks_registered_clients_test() {
+  let counter = live_users.start()
+
+  live_users.current(counter)
+  |> should.equal(0)
+  live_users.add(counter)
+  |> should.equal(1)
+  live_users.add(counter)
+  |> should.equal(2)
+  live_users.remove(counter)
+  live_users.current(counter)
+  |> should.equal(1)
 }
 
 pub fn stats_endpoint_test() {

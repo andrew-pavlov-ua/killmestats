@@ -59,7 +59,7 @@ pub fn update(
           connection_timed_out: False,
           server_status: state.Alive,
         ),
-        websocket.send(socket, "stats"),
+        websocket.send(socket, "client_stats"),
       )
     }
     state.SocketEvent(id, websocket.OnTextMessage(payload)) -> {
@@ -86,6 +86,7 @@ pub fn update(
               stats: data.latest_stats,
               cpu_history: cpu_history,
               ram_history: ram_history,
+              live_users: data.live_users,
               server_status: state.Alive,
             ),
             effect.batch([
@@ -109,7 +110,7 @@ pub fn update(
     )
     state.Tick(id) -> {
       case model.socket {
-        Some(socket) -> #(model, websocket.send(socket, "stats"))
+        Some(socket) -> #(model, websocket.send(socket, "client_stats"))
 
         None -> #(model, connect_websocket(id))
       }

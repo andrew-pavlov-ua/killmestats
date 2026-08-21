@@ -6,7 +6,11 @@ import sysstats
 pub type Data {
   // The latest sample is shown in the CPU and RAM cards.
   // Timestamped samples are used for the history chart.
-  Data(latest_stats: sysstats.SystemStats, time_stats_list: List(TimeStats))
+  Data(
+    latest_stats: sysstats.SystemStats,
+    time_stats_list: List(TimeStats),
+    live_users: Int,
+  )
 }
 
 pub type TimeStats {
@@ -29,6 +33,7 @@ pub fn to_json(data: Data) -> Json {
       json.object([
         #("latestStats", sysstats.to_json(data.latest_stats)),
         #("timeStatsList", time_stats_json),
+        #("liveUsers", json.int(data.live_users)),
       ]),
     ),
   ])
@@ -52,5 +57,7 @@ pub fn decoder() -> Decoder(Data) {
     sysstats.decoder(),
   )
 
-  decode.success(Data(time_stats_list:, latest_stats:))
+  use live_users <- decode.subfield(["data", "liveUsers"], decode.int)
+
+  decode.success(Data(time_stats_list:, latest_stats:, live_users:))
 }

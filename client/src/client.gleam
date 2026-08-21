@@ -26,6 +26,7 @@ fn init(_flags) {
       ram_history: [],
       server_status: state.Checking,
       terminal_lines: [],
+      live_users: 0,
       connection_timed_out: False,
       socket: None,
       primary_connection_id: 0,

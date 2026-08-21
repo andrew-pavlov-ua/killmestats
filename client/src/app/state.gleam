@@ -15,6 +15,7 @@ pub type Model {
     ram_history: List(Float),
     server_status: ServerStatus,
     terminal_lines: List(String),
+    live_users: Int,
     connection_timed_out: Bool,
     socket: Option(websocket.WebSocket),
     primary_connection_id: Int,

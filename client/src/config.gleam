@@ -5,5 +5,5 @@ pub fn api_base_url() -> String {
 }
 
 pub fn max_socket_connections() -> Int {
-  1000
+  500
 }
